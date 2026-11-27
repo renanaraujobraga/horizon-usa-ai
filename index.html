@@ -87,8 +87,8 @@ dialog::backdrop{background:#10243a99}dialog input{margin:4px 0 10px}
 <section class="searchpanel"><h2>Vagas com opções de visto — qualquer profissão</h2><p class="sub">Deixe o cargo vazio para procurar oportunidades em todas as áreas: restaurantes, limpeza, construção, hotelaria, fazendas e tecnologia. Diferenciamos anúncios com patrocínio declarado e vagas H-2 no portal oficial do governo.</p>
 <div class="notice" style="background:#eff7f3;border-color:#b8d9c9"><strong>Busca em todas as profissões com indicação de patrocínio:</strong> sem restringir ao seu currículo. Oportunidades H-2A e H-2B têm consulta específica no portal oficial dos EUA, com filtro de status ativo.</div>
 <div class="pathways" style="margin:12px 0 16px">
- <div class="pathway"><strong>H-2A — Agricultura e fazendas</strong><p>Empregadores com ordens de trabalho H-2A no portal oficial SeasonalJobs. Consulte apenas anúncios marcados como ativos.</p><div class="actions"><button type="button" onclick="openSeasonal('H-2A')">Pesquisar H-2A ativos no DOL</button></div></div>
- <div class="pathway"><strong>H-2B — Restaurantes, obras, limpeza, hotéis e mais</strong><p>Empregos temporários não agrícolas com anúncios oficiais H-2B. Consulte por localização ou atividade no portal do governo.</p><div class="actions"><button type="button" onclick="openSeasonal('H-2B')">Pesquisar H-2B ativos no DOL</button></div></div>
+ <div class="pathway"><strong>H-2A — Agricultura e fazendas</strong><p>Empregadores com ordens de trabalho H-2A no portal oficial SeasonalJobs. Consulte apenas anúncios marcados como ativos.</p><div class="actions"><button type="button" onclick="searchH2('H-2A')">Ver H-2A no Horizon</button><button type="button" class="secondary" onclick="openSeasonal('H-2A')">Busca oficial completa</button></div></div>
+ <div class="pathway"><strong>H-2B — Restaurantes, obras, limpeza, hotéis e mais</strong><p>Empregos temporários não agrícolas com anúncios oficiais H-2B. Consulte por localização ou atividade no portal do governo.</p><div class="actions"><button type="button" onclick="searchH2('H-2B')">Ver H-2B no Horizon</button><button type="button" class="secondary" onclick="openSeasonal('H-2B')">Busca oficial completa</button></div></div>
 </div>
 <div class="filters"><div><label for="search">Cargo ou empresa</label><input id="search" placeholder="Opcional: cook, cleaner, construction, hotel, farmworker..."></div>
 <div><label>Estado</label><select id="state"><option value="">Todos</option></select></div>
@@ -97,6 +97,7 @@ dialog::backdrop{background:#10243a99}dialog input{margin:4px 0 10px}
 <div class="actions search-actions"><button id="searchBtn" type="button" onclick="searchLocal()">Pesquisar</button><button type="button" class="secondary" onclick="clearSearch()">Limpar filtros</button></div>
 <div class="sub">Sem cargo preenchido, a busca integrada considera qualquer profissão com menção afirmativa a patrocínio. O SeasonalJobs usa um botão externo porque sua base oficial H-2A/H-2B ainda não foi integrada ao banco do Horizon. Nenhuma dessas pesquisas cobre integralmente todas as vagas de visto nos EUA.</div>
 <div style="margin-top:12px;max-width:340px"><label for="availabilityFilter">Situação da vaga</label><select id="availabilityFilter"><option value="">Todas as situações</option><option value="current">Anúncio publicado na última consulta</option><option value="historical">Somente histórico</option><option value="unknown">Situação atual não verificada</option></select></div></section>
+<section id="h2Area" aria-live="polite" style="padding-top:10px"><h2>Vagas H-2A / H-2B confirmadas como ACTIVE no DOL</h2><p class="sub">Consulta de anúncios recentes do feed oficial. Cada vaga exibida precisa ter status ACTIVE verificado na página do governo. Para ver a lista oficial completa, use “Busca oficial completa” acima.</p><p id="h2Note" class="resultnote">Clique em “Ver H-2A no Horizon” ou “Ver H-2B no Horizon” para consultar.</p><div class="cards" id="h2Jobs"></div></section>
 <section id="liveArea" aria-live="polite">
   <h2 id="liveHeading">Anúncios com patrocínio declarado — todas as áreas</h2>
   <p id="liveNote" class="sub">Clique em Pesquisar sem digitar um cargo para buscar patrocínio declarado em qualquer área das fontes integradas. Para H-2A/H-2B, use os botões oficiais acima.</p>
@@ -153,6 +154,47 @@ localStorage.setItem(migrationKey,"done");
 const el=id=>document.getElementById(id),escapeHTML=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])),money=n=>Number(n).toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
 const statusOptions=["Pendente","Contato enviado","Candidatura enviada","Resposta recebida","Falha de entrega"];
 let liveJobs=[],lastSearchAt="",searchBusy=false,liveSourceNote="",lastSearchMode="sponsored",lastTotalMatches=0;
+let h2Jobs=[],h2Searching=false;
+async function searchH2(type){
+ if(h2Searching||!["H-2A","H-2B"].includes(type))return;
+ h2Searching=true;el("h2Note").textContent="Consultando e conferindo status ACTIVE das ordens de trabalho "+type+"...";
+ el("h2Jobs").innerHTML="";
+ const params=new URLSearchParams({type});
+ const q=el("search").value.trim(),state=el("state").value;
+ if(q)params.set("q",q);
+ if(state)params.set("state",state);
+ try{
+  const response=await fetch("/api/seasonal-jobs?"+params.toString(),{cache:"no-store"});
+  const info=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(info.error||"Não foi possível consultar o DOL.");
+  h2Jobs=Array.isArray(info.jobs)?info.jobs:[];
+  const date=new Date(info.checkedAt).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"});
+  el("h2Note").textContent=h2Jobs.length+" anúncio(s) "+type+" com status ACTIVE confirmado na consulta de "+date+". Foram verificadas até "+info.checkedEntries+" ordens recentes do feed; esta não é a base completa do governo.";
+  renderH2();
+ }catch(error){
+  h2Jobs=[];
+  el("h2Note").textContent="Consulta automática indisponível: "+error.message+" Use o botão Busca oficial completa para conferir diretamente no DOL.";
+  el("h2Jobs").innerHTML="";
+ }finally{h2Searching=false;el("h2Area").scrollIntoView({behavior:"smooth",block:"start"});}
+}
+function renderH2(){
+ el("h2Jobs").innerHTML=h2Jobs.map((x,i)=>{
+  const already=items.some(y=>y.sourceUrl===x.url);
+  return '<article class="job liveJob"><span class="tag">'+escapeHTML(x.visaType)+" · Portal oficial DOL · ACTIVE"+'</span><h3>'+escapeHTML(x.role)+'</h3><strong>'+escapeHTML(x.company)+'</strong><p class="sub">'+escapeHTML(x.location||"Estados Unidos")+'</p>'+map(x.state)+
+   '<p class="sub"><strong>Processo:</strong> '+escapeHTML(x.caseNumber)+'</p><p class="sub">Status ACTIVE confirmado na página oficial durante a consulta. O empregador deve confirmar a aceitação de novas candidaturas internacionais.</p>'+
+   '<div class="actions"><a target="_blank" rel="noopener noreferrer" href="'+escapeHTML(x.url)+'">Ver anúncio oficial e recrutamento</a>'+
+   '<button type="button" class="secondary" onclick="saveH2Job('+i+')" '+(already?"disabled":"")+'>'+(already?"Salva no controle":"Salvar no controle")+'</button></div></article>';
+ }).join("")||'<div class="panel"><p>Nenhuma ordem ACTIVE foi confirmada nesta amostra do feed. Isso não significa que não existam vagas H-2 disponíveis.</p><button type="button" onclick="openSeasonal(\'H-2B\')">Consultar todas as vagas no site oficial</button></div>';
+}
+function saveH2Job(i){
+ const j=h2Jobs[i];if(!j||!j.url||items.some(x=>x.sourceUrl===j.url))return;
+ const nextId=Math.max(-1,...items.map(x=>Number(x.id)||0))+1;
+ items.push({id:nextId,company:j.company,role:j.role,city:j.location,state:j.state||"US",annual:0,perm:0,h1b:0,
+   contact:"",email:"",status:"Pendente",sourceUrl:j.url,source:j.source,verifiedAt:new Date().toISOString(),
+   visaEvidence:j.evidence,caseNumber:j.caseNumber,visaType:j.visaType});
+ save();renderH2();
+ el("h2Note").textContent="Vaga salva no controle. Consulte novamente o anúncio oficial antes de iniciar a candidatura.";
+}
 function selectedSearchMode(){return "sponsored"}
 function openSeasonal(type){
  if(!["H-2A","H-2B"].includes(type))return;
