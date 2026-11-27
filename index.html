@@ -148,7 +148,7 @@ async function loadCV(){try{const doc=await savedCV();if(doc&&doc.file){currentC
 function downloadCV(){if(!currentCV)return;const url=URL.createObjectURL(currentCV),a=document.createElement("a");a.href=url;a.download=currentCV.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)}
 async function clearDefaultCV(){try{await deleteCV();el("defaultcv").checked=false;currentCV=null;el("draftcv").value="";showCV()}catch(err){alert("Erro ao remover currículo: "+err.message)}}
 el("draftcv").addEventListener("change",e=>{const file=e.target.files[0];if(file)updateCV(file,el("defaultcv").checked)});
-el("defaultcv").addEventListener("change",async e=>{if(e.target.checked){if(currentCV){try{await persistCV(currentCV);el("cvname").textContent=currentCV.name+" · padrão salvo"}catch(err){e.target.checked=false;alert(err.message)}}else {e.target.checked=false;alert("Selecione primeiro um PDF.")}}else{try{await deleteCV();el("draftcvname").textContent="Nenhum currículo selecionado"}catch(err){alert(err.message)}}});
+el("defaultcv").addEventListener("change",async e=>{if(e.target.checked){if(currentCV){try{await persistCV(currentCV);el("draftcvname").textContent=currentCV.name+" · currículo padrão salvo"}catch(err){e.target.checked=false;alert(err.message)}}else {e.target.checked=false;alert("Selecione primeiro um PDF.")}}else{try{await deleteCV();el("draftcvname").textContent="Nenhum currículo selecionado"}catch(err){alert(err.message)}}});
 
 
 const positions={WA:3,MT:6,ND:7,MN:8,ME:12,OR:15,ID:16,SD:19,WI:20,MI:22,VT:23,NH:24,CA:27,NV:28,WY:29,NE:31,IA:32,IL:33,IN:34,OH:35,PA:36,NY:37,MA:38,RI:39,UT:40,CO:41,KS:43,MO:44,KY:46,WV:47,VA:48,MD:49,NJ:50,CT:51,AZ:52,NM:53,OK:55,AR:56,TN:57,NC:58,SC:59,DE:60,TX:65,LA:67,MS:68,AL:69,GA:70,FL:83,AK:74,HI:76};
