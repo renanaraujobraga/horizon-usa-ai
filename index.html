@@ -247,7 +247,25 @@ const gmailCallback=new URLSearchParams(location.search).get("gmail");
 if(gmailCallback){
  history.replaceState(null,"",location.pathname+location.hash);
  if(gmailCallback==="connected")setTimeout(()=>alert("Gmail conectado com sucesso!"),100);
- else setTimeout(()=>alert("Não foi possível conectar o Gmail ("+gmailCallback+"). Verifique a configuração ou tente novamente."),100);
+ else {
+  const reasons={
+    config:"Credenciais OAuth incompletas na Vercel.",
+    denied:"Autorização recusada pelo Google.",
+    state:"Sessão de autorização expirada ou bloqueada. Recarregue o site e tente novamente.",
+    token_client:"O Google recusou o Client ID ou Client Secret. Verifique se ambos são do mesmo cliente OAuth e foram salvos na Vercel.",
+    token_grant:"O Google recusou o código de autorização. Confira o redirect URI, a sincronização do deploy e tente conectar novamente.",
+    token_other:"O Google recusou a troca do código por tokens. Consulte os logs da função auth-callback.",
+    token_missing:"A autorização retornou sem token de acesso.",
+    token_network:"Falha de conexão com o servidor de autorização do Google.",
+    userinfo_http:"O Google não autorizou consultar o endereço da conta.",
+    userinfo_email:"Não foi possível confirmar o endereço Gmail da conta selecionada.",
+    userinfo_network:"Falha ao consultar os dados básicos da conta Google.",
+    forbidden:"A conta Google selecionada não corresponde ao Gmail autorizado no Horizon.",
+    session:"Falha ao salvar a sessão. Verifique SESSION_SECRET no ambiente Production."
+  };
+  const msg=reasons[gmailCallback]||"Falha não identificada ("+gmailCallback+").";
+  setTimeout(()=>alert("Falha ao conectar Gmail: "+msg),100);
+}
 }
 ["search","state","sponsor","status"].forEach(id=>el(id).addEventListener("input",render));
 el("search").addEventListener("keydown",e=>{if(e.key==="Enter")searchLocal()});
