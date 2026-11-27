@@ -58,6 +58,12 @@ dialog::backdrop{background:#10243a99}dialog input{margin:4px 0 10px}
 .liveJob a{display:inline-flex;align-items:center;border:1px solid #087e68;border-radius:9px;padding:10px 13px;color:#087e68;font-weight:650;text-decoration:none}
 .liveJob .actions button{margin:0}
 #liveNote{margin:6px 0 17px}
+.search-modes{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0 18px}
+.search-mode{display:flex;align-items:center;gap:9px;border:1px solid #c8d5df;border-radius:10px;padding:10px 12px;cursor:pointer;background:#f7fafc;color:#1b3956;font-weight:650}
+.search-mode:has(input:checked){border-color:#087e68;background:#e6f5ef}
+.search-mode input{width:16px;height:16px;accent-color:#087e68}
+.search-mode span{font-size:13px}
+
 .pathways{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}
 .pathway{border:1px solid #d5e3ed;border-radius:13px;background:#fff;padding:17px 18px}
 .pathway strong{color:#087e68;font-size:17px}
@@ -79,15 +85,19 @@ dialog::backdrop{background:#10243a99}dialog input{margin:4px 0 10px}
 <div class="connectbar" id="gmailConnectBar"><div><strong>Gmail — aguardando verificação da conexão</strong><span class="sub" id="gmailInfo">Para enviar com PDF em um clique, conecte seu Gmail ao Horizon.</span></div><div class="actions"><button id="connectBtn" type="button" onclick="connectGmail()" disabled>Conectar Gmail</button><button id="disconnectBtn" class="secondary" type="button" onclick="disconnectGmail()" hidden>Desconectar</button></div></div>
 <div class="stats" id="stats"></div>
 <section class="searchpanel"><h2>Investigar oportunidades e empregadores</h2><p class="sub">Pesquise empresas que mencionam patrocínio nos anúncios consultados e explore registros históricos informados para sua prospecção. Não se limita a vagas abertas hoje.</p>
+<div class="search-modes" role="group" aria-label="Tipo de pesquisa">
+<label class="search-mode"><input type="radio" name="searchMode" value="sponsored" checked> <span>Com indicação de patrocínio</span></label>
+<label class="search-mode"><input type="radio" name="searchMode" value="all"> <span>Todas as vagas anunciadas nas fontes</span></label>
+</div>
 <div class="filters"><div><label for="search">Cargo ou empresa</label><input id="search" placeholder="Ex.: Product Owner, Scrum Master, Project Manager..."></div>
 <div><label>Estado</label><select id="state"><option value="">Todos</option></select></div>
 <div><label>Tipo de evidência / visto</label><select id="sponsor"><option value="">Todos</option><option value="PERM">PERM (histórico)</option><option value="H-1B">H-1B</option><option value="EB-2">EB-2 (menção no anúncio)</option><option value="EB-3">EB-3 (menção no anúncio)</option></select></div>
 <div><label>Andamento</label><select id="status"><option value="">Todos</option><option>Pendente</option><option>Contato enviado</option><option>Candidatura enviada</option><option>Resposta recebida</option><option>Falha de entrega</option></select></div></div>
 <div class="actions search-actions"><button id="searchBtn" type="button" onclick="searchLocal()">Pesquisar</button><button type="button" class="secondary" onclick="clearSearch()">Limpar filtros</button></div>
-<div class="sub">Anúncios atuais: Greenhouse, Lever e Remotive com menção afirmativa de patrocínio. Histórico migratório não comprova vaga aberta.</div>
+<div class="sub">A opção “Todas as vagas” pesquisa todos os anúncios disponíveis nas fontes integradas, não todas as vagas dos EUA. O anúncio publicado pode ter sido encerrado desde a última consulta. Histórico migratório não comprova vaga aberta.</div>
 <div style="margin-top:12px;max-width:340px"><label for="availabilityFilter">Situação da vaga</label><select id="availabilityFilter"><option value="">Todas as situações</option><option value="current">Anúncio publicado na última consulta</option><option value="historical">Somente histórico</option><option value="unknown">Situação atual não verificada</option></select></div></section>
 <section id="liveArea" aria-live="polite">
-  <h2>Oportunidades atuais com menção de patrocínio</h2>
+  <h2 id="liveHeading">Oportunidades atuais com menção de patrocínio</h2>
   <p id="liveNote" class="sub">Clique em Pesquisar para procurar anúncios que mencionam patrocínio migratório. A ausência de resultado não prova que não há vagas.</p>
   <div class="cards" id="liveJobs"></div>
 </section>
@@ -141,7 +151,8 @@ localStorage.setItem(migrationKey,"done");
 }
 const el=id=>document.getElementById(id),escapeHTML=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])),money=n=>Number(n).toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
 const statusOptions=["Pendente","Contato enviado","Candidatura enviada","Resposta recebida","Falha de entrega"];
-let liveJobs=[],lastSearchAt="",searchBusy=false,liveSourceNote="";
+let liveJobs=[],lastSearchAt="",searchBusy=false,liveSourceNote="",lastSearchMode="sponsored",lastTotalMatches=0;
+function selectedSearchMode(){return document.querySelector('input[name="searchMode"]:checked')?.value||"sponsored"}
 async function searchLocal(){
  if(searchBusy)return;
  searchBusy=true;
@@ -149,24 +160,27 @@ async function searchLocal(){
  el("searchBtn").textContent="Pesquisando...";
  el("liveNote").textContent="Consultando anúncios publicados em fontes públicas dos EUA...";
  el("liveJobs").innerHTML="";
- const q=el("search").value.trim(),state=el("state").value;
+ const q=el("search").value.trim(),state=el("state").value,mode=selectedSearchMode();
+ lastSearchMode=mode;el("liveHeading").textContent=mode==="all"?"Todas as vagas anunciadas nas fontes consultadas":"Oportunidades atuais com menção de patrocínio";
  const params=new URLSearchParams();
  if(q)params.set("q",q);
+ params.set("mode",mode);
  if(state&&state.length===2&&state!=="US")params.set("state",state);
  const selectedVisa=el("sponsor").value;
- if(selectedVisa==="PERM"){
+ if(selectedVisa==="PERM"&&mode!=="all"){
    liveJobs=[];lastSearchAt="";
    el("liveJobs").innerHTML="";
    el("liveNote").textContent="Filtro PERM: consulte abaixo os registros históricos informados. Não há correspondência automática de cada registro PERM com anúncios atuais.";
    searchBusy=false;el("searchBtn").disabled=false;el("searchBtn").textContent="Pesquisar";
    render();el("historyArea").scrollIntoView({behavior:"smooth",block:"start"});return;
  }
- if(["EB-2","EB-3","H-1B"].includes(selectedVisa))params.set("visa",selectedVisa);
+ if(mode!=="all"&&["EB-2","EB-3","H-1B"].includes(selectedVisa))params.set("visa",selectedVisa);
  try{
    const res=await fetch("/api/jobs?"+params.toString(),{cache:"no-store"});
    const data=await res.json().catch(()=>({}));
    if(!res.ok)throw Error(data.error||"Falha ao consultar vagas");
    liveJobs=Array.isArray(data.jobs)?data.jobs:[];
+   lastTotalMatches=Number(data.totalMatches)||liveJobs.length;
    lastSearchAt=data.checkedAt||"";
    liveSourceNote=data.sourcesOk+" de "+data.sourcesChecked+" fontes responderam";
    if(data.unavailable?.length)liveSourceNote+="; indisponíveis: "+data.unavailable.slice(0,6).join(", ")+(data.unavailable.length>6?" e outras":"");
@@ -195,14 +209,16 @@ function liveMap(job){
 function renderLive(){
  const count=liveJobs.length;
  const at=lastSearchAt?new Date(lastSearchAt).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}):"";
- el("liveNote").textContent=count+" anúncio(s) com menção afirmativa de patrocínio · Consulta "+at+" · "+liveSourceNote+". Categoria exata do visto depende de confirmação com o empregador.";
- el("liveJobs").innerHTML=liveJobs.filter(x=>!el("availabilityFilter").value||el("availabilityFilter").value==="current").map((x,i)=>{
+ el("liveNote").textContent=(lastSearchMode==="all"?"Todas as vagas anunciadas":"Anúncios com indicação de patrocínio")+": "+count+" exibidos de "+lastTotalMatches+" encontrados · Consulta "+at+" · "+liveSourceNote+". Cobertura limitada às fontes integradas; confirme se a vaga ainda recebe candidaturas.";
+ el("liveJobs").innerHTML=liveJobs.map((job,i)=>({job,i})).filter(({job})=>!el("availabilityFilter").value||el("availabilityFilter").value==="current").map(({job:x,i})=>{
   const saved=items.some(y=>y.sourceUrl===x.url);
   const validUrl=typeof x.url==="string"&&x.url.startsWith("https://")?escapeHTML(x.url):"";
-  return '<article class="job liveJob"><span class="tag">Menção de patrocínio no anúncio · '+escapeHTML(x.source)+'</span>'+availabilityHTML({sourceUrl:x.url,verifiedAt:lastSearchAt})+'<h3>'+escapeHTML(x.role)+'</h3><strong>'+escapeHTML(x.company)+'</strong><p class="liveMeta">'+escapeHTML(x.location||"Local não informado")+(x.remote?" · Remoto":"")+'</p>'+liveMap(x)+
+  const e=x.evidence||{},kind=e.kind||"none";
+  const sponsorLabel=kind==="explicit-claim"?"Menção positiva a patrocínio":kind==="exclusion"?"Anúncio informa restrição de patrocínio":"Patrocínio não informado";
+  return '<article class="job liveJob"><span class="tag '+(kind==="exclusion"?'warn':'')+'">'+escapeHTML(sponsorLabel)+' · '+escapeHTML(x.source)+'</span>'+availabilityHTML({sourceUrl:x.url,verifiedAt:lastSearchAt})+'<h3>'+escapeHTML(x.role)+'</h3><strong>'+escapeHTML(x.company)+'</strong><p class="liveMeta">'+escapeHTML(x.location||"Local não informado")+(x.remote?" · Remoto":"")+'</p>'+liveMap(x)+
    (x.salaryText?'<p><strong>Salário informado: </strong>'+escapeHTML(x.salaryText)+'</p>':'<p class="sub">Salário não informado pela fonte.</p>')+
-   '<p class="sub"><strong>Evidência mencionada:</strong> '+escapeHTML(x.evidence?.excerpt||"Texto de patrocínio encontrado na fonte.")+'</p>'+
-   '<p class="sub"><strong>Categoria mencionada:</strong> '+escapeHTML(x.evidence?.visaTypes?.length?x.evidence.visaTypes.join(", "):"Não especificada")+' · Exigências e elegibilidade devem ser confirmadas com o empregador.</p>'+
+   '<p class="sub"><strong>Patrocínio:</strong> '+escapeHTML(kind==="explicit-claim"?e.excerpt||"Menção positiva encontrada":kind==="exclusion"?e.note||"O anúncio indica que não patrocina":"Não há informação afirmativa ou negativa identificada na descrição consultada.")+'</p>'+
+   '<p class="sub"><strong>Categoria de visto explicitamente mencionada:</strong> '+escapeHTML(e.visaTypes?.length?e.visaTypes.join(", "):"Não especificada")+' · Confirme condições com o empregador.</p>'+
    '<p class="sub">Anúncio consultado: '+escapeHTML(at)+'. Não é garantia de patrocínio ou aprovação de visto.</p><div class="actions">'+
    (validUrl?'<a href="'+validUrl+'" target="_blank" rel="noopener noreferrer">Ver anúncio e candidatar-se</a>':'')+
    '<button type="button" class="secondary" onclick="saveLiveJob('+i+')" '+(saved?'disabled':'')+'>'+(saved?'Salva no controle':'Salvar no controle')+'</button></div></article>';
@@ -219,6 +235,9 @@ function saveLiveJob(i){
 function clearSearch(){
  el("search").value="";el("state").value="";el("sponsor").value="";el("status").value="";el("availabilityFilter").value="";
  liveJobs=[];lastSearchAt="";
+ document.querySelector('input[name="searchMode"][value="sponsored"]').checked=true;
+ lastSearchMode="sponsored";lastTotalMatches=0;
+ el("liveHeading").textContent="Oportunidades atuais com menção de patrocínio";
  el("liveNote").textContent="Filtros limpos. Clique em Pesquisar para procurar anúncios com menção a patrocínio.";
  el("liveJobs").innerHTML="";render();
 }
@@ -432,6 +451,12 @@ if(gmailCallback){
 }
 }
 ["search","state","sponsor","status","availabilityFilter"].forEach(id=>el(id).addEventListener("input",()=>{render();if(id==="availabilityFilter"&&lastSearchAt)renderLive()}));
+document.querySelectorAll('input[name="searchMode"]').forEach(input=>input.addEventListener("change",()=>{
+ const broad=selectedSearchMode()==="all";el("sponsor").disabled=broad;
+ if(lastSearchAt){liveJobs=[];lastSearchAt="";el("liveJobs").innerHTML="";}
+ el("liveHeading").textContent=broad?"Todas as vagas anunciadas nas fontes consultadas":"Oportunidades atuais com menção de patrocínio";
+ el("liveNote").textContent=broad?"Clique em Pesquisar para consultar todas as vagas das fontes integradas. Não significa todas as vagas dos EUA.":"Clique em Pesquisar para encontrar anúncios com menção de patrocínio.";
+}));
 ["search","state"].forEach(id=>el(id).addEventListener("input",()=>{
  if(lastSearchAt){lastSearchAt="";liveJobs=[];el("liveJobs").innerHTML="";el("liveNote").textContent="Filtros alterados. Clique em Pesquisar para atualizar as vagas reais.";}
 }));
