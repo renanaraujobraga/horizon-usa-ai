@@ -28,6 +28,11 @@ export default async function handler(req,res){
       return go(tokenCode==="invalid_client"?"token_client":tokenCode==="invalid_grant"?"token_grant":"token_other");
     }
     if(!tokens.access_token)return go("token_missing");
+    const grantedScopes=(typeof tokens.scope==="string"?tokens.scope:"").split(/\\s+/).filter(Boolean);
+    if(!grantedScopes.includes("https://www.googleapis.com/auth/gmail.send")){
+      console.error("Google OAuth authorization missing gmail.send scope");
+      return go("gmail_scope_missing");
+    }
   }catch(e){
     console.error("Google OAuth network error",e?.name);
     return go("token_network");
@@ -57,6 +62,7 @@ export default async function handler(req,res){
       email:user.email,
       access_token:tokens.access_token,
       refresh_token:tokens.refresh_token||null,
+      scopes:tokens.scope,
       expiresAt:Date.now()+(tokens.expires_in||3600)*1000
     });
     const sessionCookie=res.getHeader("Set-Cookie");
