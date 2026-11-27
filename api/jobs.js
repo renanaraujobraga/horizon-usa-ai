@@ -57,16 +57,47 @@ function acceptableUrl(uri){
 async function getJSON(url){
  const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),6500);
  try{
-  const response=await fetch(url,{headers:{"Accept":"application/json","User-Agent":"HorizonUSAAI/0.3 (+public-job-search)"},signal:ctrl.signal});
+  const response=await fetch(url,{headers:{"Accept":"application/json","User-Agent":"HorizonUSAAI/0.4 (immigration-evidence-search)"},signal:ctrl.signal});
   if(!response.ok)throw new Error("HTTP "+response.status);
   return await response.json();
  }finally{clearTimeout(timeout)}
+}
+function cleanText(text){
+ return String(text||"").replace(/<[^>]*>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/\s+/g," ").slice(0,35000);
+}
+// Strict: reject negative sponsorship language before looking for affirmative support.
+// A visa mention in an ad is NOT considered a sponsorship offer.
+function immigrationEvidence(description){
+ const text=cleanText(description);
+ const negatives=[
+  /(?:do(?:es)?\s+not|don['’]?t|won['’]?t|cannot|can['’]?t|unable\s+to|not\s+able\s+to)\s+(?:provide|offer|support|consider|sponsor)[^.!?]{0,75}(?:sponsor|visa|immigration|work\s+authorization)/i,
+  /(?:no|without|not\s+(?:available|provided|offered|eligible))\s+(?:visa\s+|immigration\s+)?sponsorship/i,
+  /(?:must|need)\s+(?:already\s+)?(?:be\s+)?(?:authorized|eligible)\s+to\s+work[^.!?]{0,110}without\s+(?:the\s+need\s+for\s+)?(?:visa\s+)?sponsorship/i,
+  /sponsorship\s+(?:is\s+)?(?:not|unavailable|cannot|won['’]?t)/i
+ ];
+ if(negatives.some(rx=>rx.test(text)))return {kind:"exclusion",note:"O anúncio indica restrição ou indisponibilidade de patrocínio."};
+ const affirmed=[
+  /\b(?:we|company|employer)\s+(?:will|can|may|do)\s+(?:provide|offer|support|consider)\s+(?:visa\s+|immigration\s+|work\s+)?sponsorship\b/i,
+  /\b(?:visa|immigration|h[- ]?1b|eb[- ]?[23])\s+sponsorship\s+(?:is\s+)?(?:available|offered|provided|supported|considered)\b/i,
+  /\bsponsorship\s+(?:for\s+)?(?:h[- ]?1b|eb[- ]?[23]|work\s+visa|employment\s+visa)[^.!?]{0,35}(?:available|provided|offered|supported|considered)\b/i,
+  /\b(?:offers?|provides?|supports?)\s+(?:employment[- ]based\s+)?(?:visa\s+)?sponsorship\b/i
+ ];
+ const hit=affirmed.map(rx=>rx.exec(text)).find(Boolean);
+ if(!hit)return {kind:"none"};
+ const index=Math.max(0,text.indexOf(hit[0]));
+ const start=Math.max(0,index-75),end=Math.min(text.length,index+hit[0].length+100);
+ const context=text.slice(start,end);
+ const visaTypes=[];
+ if(/\bh[- ]?1b\b/i.test(context))visaTypes.push("H-1B");
+ if(/\beb[- ]?2\b/i.test(context))visaTypes.push("EB-2");
+ if(/\beb[- ]?3\b/i.test(context))visaTypes.push("EB-3");
+ return {kind:"explicit-claim",visaTypes,note:"O anúncio menciona disponibilidade de patrocínio, sujeita à confirmação com o empregador.",excerpt:context};
 }
 function ghJob(j,company){
  const location=String(j.location?.name||"");
  return {id:"gh:"+String(j.id),company,role:String(j.title||""),location,
   state:extractState(location),remote:/remote/i.test(location),url:acceptableUrl(j.absolute_url),
-  source:"Greenhouse",publishedAt:j.updated_at||null};
+  source:"Greenhouse",publishedAt:j.updated_at||null,evidence:immigrationEvidence(j.content||"")};
 }
 function leverJob(j,company){
  const location=String(j.categories?.location||j.workplaceType||"");
@@ -74,17 +105,17 @@ function leverJob(j,company){
  const best=[location,...others].find(isUS)||location;
  return {id:"lever:"+String(j.id),company,role:String(j.text||""),location:best,
   state:extractState(best),remote:/remote/i.test(best)||j.workplaceType==="remote",url:acceptableUrl(j.hostedUrl),
-  source:"Lever",publishedAt:j.createdAt?new Date(j.createdAt).toISOString():null};
+  source:"Lever",publishedAt:j.createdAt?new Date(j.createdAt).toISOString():null,evidence:immigrationEvidence(j.descriptionPlain||j.description||j.additional||"")};
 }
 function remotiveJob(j){
  const location=String(j.candidate_required_location||"");
  return {id:"remotive:"+String(j.id),company:String(j.company_name||""),role:String(j.title||""),location,
   state:extractState(location),remote:true,url:acceptableUrl(j.url),
-  source:"Remotive",publishedAt:j.publication_date||null,salaryText:String(j.salary||"").slice(0,140)};
+  source:"Remotive",publishedAt:j.publication_date||null,salaryText:String(j.salary||"").slice(0,140),evidence:immigrationEvidence(j.description||"")};
 }
 async function sourceJobs([kind,slug,company]){
  const url=kind==="greenhouse"
-  ?"https://boards-api.greenhouse.io/v1/boards/"+encodeURIComponent(slug)+"/jobs"
+  ?"https://boards-api.greenhouse.io/v1/boards/"+encodeURIComponent(slug)+"/jobs?content=true"
   :"https://api.lever.co/v0/postings/"+encodeURIComponent(slug)+"?mode=json";
  const result=await getJSON(url);
  const raw=kind==="greenhouse"?result.jobs:result;
@@ -100,7 +131,9 @@ export default async function handler(req,res){
  if(req.method!=="GET")return res.status(405).json({error:"Método não permitido"});
  const q=String(req.query?.q||"").slice(0,100).trim();
  const state=String(req.query?.state||"").toUpperCase().slice(0,2);
+ const visa=String(req.query?.visa||"").toUpperCase().slice(0,5);
  if(state&&!US_STATES[state])return res.status(400).json({error:"Estado inválido"});
+ if(visa&&!["EB-2","EB-3","H-1B"].includes(visa))return res.status(400).json({error:"Categoria de visto inválida"});
  const checkedAt=new Date().toISOString();
  try{
   const results=await Promise.allSettled([...BOARDS.map(sourceJobs),remoteJobs()]);
@@ -115,7 +148,9 @@ export default async function handler(req,res){
   const seen=new Set();
   const matches=jobs.filter(job=>{
    if(!job.url||!job.role||!job.company||!isUS(job.location))return false;
+   if(job.evidence?.kind!=="explicit-claim")return false;
    if(state&&job.state!==state)return false;
+   if(visa&&!job.evidence.visaTypes.includes(visa))return false;
    if(!matchesQuery(job,q))return false;
    const dedupe=job.source+":"+job.id;
    if(seen.has(dedupe))return false;
@@ -127,7 +162,7 @@ export default async function handler(req,res){
   return res.status(200).json({
    jobs:matches.slice(0,100),totalMatches:matches.length,checkedAt,
    sourcesOk:found,sourcesChecked:results.length,unavailable,
-   note:"Anúncios retornados por APIs públicas. Publicação atual não prova EB-3 nem contratação internacional. Confirmar no link oficial."
+   note:"Somente anúncios com indicação afirmativa de patrocínio na descrição. Mesmo assim, tipo de visto e elegibilidade precisam de confirmação. Não são provas de EB-2, EB-3 ou H-1B aprovados."
   });
  }catch(e){
   console.error("Public job search failure",e?.name||"Error");
