@@ -169,21 +169,21 @@ function draft(id){const x=items.find(x=>x.id===id);if(!x)return;if((x.emailSent
 el("dcompany").textContent=x.company+" — "+x.role;el("to").value=x.email||"";el("sub").value=x.role+" | Product Leadership and EB-3 Inquiry";
 el("body").value="Dear "+(x.contact?x.contact.split(" ")[0]:"Hiring Team")+",\n\nI am a senior technology and product leader with over 20 years of experience, including more than a decade leading product and project delivery. I am interested in learning more about "+x.role+" opportunities at "+x.company+".\n\nMy background includes enterprise SaaS, CRM, AI-enabled products, product roadmaps and cross-functional delivery. I would also appreciate knowing whether your company considers EB-3 permanent residence sponsorship for qualified international candidates.\n\nI would welcome the opportunity to discuss my experience and share my resume.\n\nBest regards,\nRenan Braga\nlinkedin.com/in/renanb";
 currentOpportunity=x.id;el("sendresult").textContent="";el("draftcv").value="";showCV();el("dlg").showModal();updateSendButton()}
-let gmailConnected=false,gmailConfigured=false,gmailEmail="",sending=false,currentOpportunity=null;
+let gmailConnected=false,gmailCanSend=false,gmailConfigured=false,gmailEmail="",sending=false,currentOpportunity=null;
 async function checkGmailStatus(){
  try{
   const response=await fetch("/api/gmail-status",{credentials:"same-origin",cache:"no-store"});
   if(!response.ok)throw Error("Servidor indisponível");
   const info=await response.json();
-  gmailConnected=!!info.connected;gmailConfigured=!!info.configured;gmailEmail=info.email||"";
+  gmailConnected=!!info.connected;gmailCanSend=!!info.canSend;gmailConfigured=!!info.configured;gmailEmail=info.email||"";
   const heading=el("gmailConnectBar").querySelector("strong");
   const infoLabel=el("gmailInfo");
-  heading.textContent=gmailConnected?"Gmail conectado: "+gmailEmail:gmailConfigured?"Gmail não conectado":"Gmail API ainda não configurada";
-  infoLabel.textContent=gmailConnected?"Envie mensagens com PDF diretamente pelo Horizon.":"Conecte sua conta uma vez para enviar e-mails com anexos.";
-  el("connectBtn").hidden=gmailConnected;el("connectBtn").disabled=!gmailConfigured;
+  heading.textContent=gmailCanSend?"Gmail pronto para enviar: "+gmailEmail:gmailConnected?"Gmail conectado sem permissão de envio":gmailConfigured?"Gmail não conectado":"Gmail API ainda não configurada";
+  infoLabel.textContent=gmailCanSend?"Envie mensagens com PDF diretamente pelo Horizon.":gmailConnected?"Clique em Reconectar Gmail e autorize a permissão para enviar e-mails em seu nome.":"Conecte sua conta para enviar e-mails com anexos.";
+  el("connectBtn").hidden=gmailCanSend;el("connectBtn").disabled=!gmailConfigured;el("connectBtn").textContent=gmailConnected?"Reconectar Gmail":"Conectar Gmail";
   el("disconnectBtn").hidden=!gmailConnected;
  }catch(err){
-  gmailConnected=false;el("gmailConnectBar").querySelector("strong").textContent="Conexão Gmail indisponível";
+  gmailConnected=false;gmailCanSend=false;el("gmailConnectBar").querySelector("strong").textContent="Conexão Gmail indisponível";
   el("gmailInfo").textContent="Verifique a configuração do servidor.";
   el("connectBtn").disabled=true;
  }
@@ -196,9 +196,9 @@ async function disconnectGmail(){
  if(response.ok)await checkGmailStatus();
 }
 function updateSendButton(){
- const ready=gmailConnected&&!!currentCV&&!sending;
+ const ready=gmailConnected&&gmailCanSend&&!!currentCV&&!sending;
  el("sendBtn").disabled=!ready;
- el("sendHelp").textContent=!gmailConnected?"Conecte o Gmail na parte superior da página antes de enviar.":!currentCV?"Selecione um PDF (máximo 2 MB) para liberar o envio.":"Ao confirmar, a mensagem e o PDF serão enviados pela conta "+gmailEmail+".";
+ el("sendHelp").textContent=!gmailCanSend?"Reconecte o Gmail na parte superior da página e autorize o envio de mensagens.":!currentCV?"Selecione um PDF (máximo 2 MB) para liberar o envio.":"Ao confirmar, a mensagem e o PDF serão enviados pela conta "+gmailEmail+".";
 }
 function pdfToBase64(file){
  return new Promise((resolve,reject)=>{
@@ -210,7 +210,7 @@ function pdfToBase64(file){
  });
 }
 async function sendGmail(){
- if(sending||!gmailConnected)return;
+ if(sending||!gmailConnected||!gmailCanSend)return;
  const to=el("to").value.trim(),subject=el("sub").value.trim(),body=el("body").value;
  if(!to||!subject||!body.trim())return alert("Informe o destinatário, o assunto e a mensagem.");
  if(!currentCV||!validCV(currentCV))return alert("Selecione um currículo PDF válido.");
@@ -256,6 +256,7 @@ if(gmailCallback){
     token_grant:"O Google recusou o código de autorização. Confira o redirect URI, a sincronização do deploy e tente conectar novamente.",
     token_other:"O Google recusou a troca do código por tokens. Consulte os logs da função auth-callback.",
     token_missing:"A autorização retornou sem token de acesso.",
+    gmail_scope_missing:"O Google não concedeu a permissão de envio. Acesse Google Cloud → Google Auth Platform → Data access, adicione gmail.send e reconecte o Gmail autorizando o envio.",
     token_network:"Falha de conexão com o servidor de autorização do Google.",
     userinfo_http:"O Google não autorizou consultar o endereço da conta.",
     userinfo_email:"Não foi possível confirmar o endereço Gmail da conta selecionada.",
