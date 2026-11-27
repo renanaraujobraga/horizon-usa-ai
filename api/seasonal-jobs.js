@@ -55,16 +55,16 @@ export default async function handler(req,res){
  if(!["ALL","H-2A","H-2B"].includes(type)||state&&!/^[A-Z]{2}$/.test(state))
    return res.status(400).json({error:"Filtro inválido"});
  try{
-  const xml=await getPage(FEED,9000);
+  const xml=await getPage(FEED,6500);
   if(!/<(?:rss|feed)\b/i.test(xml))throw Error("Feed inválido");
   const all=jobsFromRSS(xml);
   const matching=all.filter(j=>(type==="ALL"||j.visaType===type)
    &&(!q||(j.role+" "+j.company+" "+j.location+" "+j.description).toLowerCase().includes(q))
    &&(!state||j.state===state));
   // This live route is a small window into new postings, not the full DOL registry.
-  const selection=matching.slice(0,32);
+  const selection=matching.slice(0,18);
   const checked=await Promise.allSettled(selection.map(async job=>{
-   const page=await getPage(job.url,4500);
+   const page=await getPage(job.url,3000);
    if(!activeInPage(page,job.caseNumber))return null;
    return {...job,availability:"ACTIVE",evidence:{kind:"official-program",visaTypes:[job.visaType],
     note:"Status ACTIVE confirmado na página da ordem de trabalho SeasonalJobs."}};
