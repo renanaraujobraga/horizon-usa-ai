@@ -13,9 +13,10 @@ Interface estática com filtros de oportunidades, status de contatos e formulár
 
 1. No [Google Cloud Console](https://console.cloud.google.com/), crie um projeto (ou selecione um existente), ative a **Gmail API** e configure a **OAuth consent screen / Google Auth Platform**.
 2. Em *Audience*, use **External** e adicione sua própria conta Gmail à lista de usuários de teste enquanto o aplicativo estiver em modo Testing. Configure os escopos `https://www.googleapis.com/auth/gmail.send` e `https://www.googleapis.com/auth/userinfo.email` caso o console solicite.
-3. Crie um **OAuth client ID**, tipo **Web application**, com o Authorized redirect URI exatamente igual a:
+3. Na **Google Auth Platform → Data access**, clique em **Add or remove scopes** e inclua o escopo `https://www.googleapis.com/auth/gmail.send` (envio de mensagens). Confirme que ele aparece na lista de escopos configurados. No consentimento do Google, marque/autorize a permissão de envio. O aplicativo não solicita permissão de leitura de e-mails.
+4. Crie um **OAuth client ID**, tipo **Web application**, com o Authorized redirect URI exatamente igual a:
    `https://horizon-usa-ai.vercel.app/api/auth-callback`
-4. No painel Vercel do projeto Horizon USA AI, abra **Settings → Environment Variables** e crie as variáveis abaixo para **Production**:
+5. No painel Vercel do projeto Horizon USA AI, abra **Settings → Environment Variables** e crie as variáveis abaixo para **Production**:
 
 | Nome | Valor |
 |---|---|
@@ -25,9 +26,9 @@ Interface estática com filtros de oportunidades, status de contatos e formulár
 | `APP_ORIGIN` | `https://horizon-usa-ai.vercel.app` |
 | `ALLOWED_GMAIL_ADDRESS` | A conta Gmail autorizada para uso pessoal (recomendado) |
 
-5. Acione um **Redeploy** na Vercel depois de salvar as variáveis. Os segredos devem permanecer **somente** na Vercel — nunca no GitHub, no HTML ou nesta conversa.
-6. Abra o Horizon, clique em **Conectar Gmail** e autorize o acesso solicitado no Google. O escopo é limitado a **enviar** mensagens e consultar o endereço da conta; a aplicação não solicita leitura de caixa de entrada.
-7. Selecione um currículo PDF no formulário **Preparar apresentação**, marque **Usar como padrão**, revise destinatário/assunto/mensagem e clique **Enviar e-mail com CV**. O status passa a **Contato enviado** somente quando o Gmail retornar um ID de envio.
+6. Acione um **Redeploy** na Vercel depois de salvar as variáveis. Os segredos devem permanecer **somente** na Vercel — nunca no GitHub, no HTML ou nesta conversa.
+7. Abra o Horizon, clique em **Conectar Gmail** e autorize o acesso solicitado no Google. O escopo é limitado a **enviar** mensagens e consultar o endereço da conta; a aplicação não solicita leitura de caixa de entrada.
+8. Selecione um currículo PDF no formulário **Preparar apresentação**, marque **Usar como padrão**, revise destinatário/assunto/mensagem e clique **Enviar e-mail com CV**. O status passa a **Contato enviado** somente quando o Gmail retornar um ID de envio.
 
 **Limites:** PDF de até 2 MB (limite conservador por payload de Vercel Functions); armazena o arquivo padrão apenas no navegador. A sessão do Gmail é mantida em cookie HttpOnly criptografado (AES-256-GCM). Uma sessão pode expirar ou precisar ser renovada; reconecte caso necessário. Em modo Testing, os refresh tokens de aplicativos Google externos podem expirar em sete dias.
 
@@ -44,3 +45,7 @@ Interface estática com filtros de oportunidades, status de contatos e formulár
 - `api/_gmail.js`: criptografia, tokens e validações.
 
 Os arquivos em `api/` são Vercel Node.js Functions, sem bibliotecas externas.
+
+## Erro: Request had insufficient authentication scopes
+
+O Gmail só aceita o envio se o token OAuth tiver o escopo `gmail.send`. Se o Horizon exibir **Gmail conectado sem permissão de envio**, vá ao Google Cloud → Google Auth Platform → **Data access** e inclua `https://www.googleapis.com/auth/gmail.send`; depois clique em **Reconectar Gmail** no Horizon e autorize a permissão de envio no consentimento do Google. O sistema passa a validar o escopo recebido e não libera o envio quando o token está incompleto. Não são necessárias permissões `gmail.modify` ou `https://mail.google.com/`.
