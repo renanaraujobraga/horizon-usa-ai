@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Horizon USA AI — Inteligência de Patrocínio Migratório</title><style>
+<title>Horizon USA AI — Trabalhar e Migrar Legalmente para os EUA</title><style>
 :root{--navy:#112a46;--green:#087e68;--line:#dce5ee;--muted:#61758b}*{box-sizing:border-box}
 body{margin:0;background:#f3f6fb;color:var(--navy);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
 header{background:linear-gradient(110deg,#0c223c,#183d59);color:#fff;padding:22px 5%}
@@ -52,18 +52,27 @@ dialog::backdrop{background:#10243a99}dialog input{margin:4px 0 10px}
 .liveJob a{display:inline-flex;align-items:center;border:1px solid #087e68;border-radius:9px;padding:10px 13px;color:#087e68;font-weight:650;text-decoration:none}
 .liveJob .actions button{margin:0}
 #liveNote{margin:6px 0 17px}
+.pathways{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}
+.pathway{border:1px solid #d5e3ed;border-radius:13px;background:#fff;padding:17px 18px}
+.pathway strong{color:#087e68;font-size:17px}
+.pathway p{font-size:13px;color:#52687d;margin:7px 0 0}
+@media(max-width:750px){.pathways{grid-template-columns:1fr}}
 
 
 
 @media(max-width:750px){.filters,.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.wrap{padding:18px 12px}}
 </style></head><body>
 <header><div style="font-size:21px;font-weight:800;letter-spacing:.5px">HORIZON <span style="color:#5cdbb4">USA AI</span></div>
-<small>Inteligência de patrocínio migratório · EB-2, EB-3, H-1B e histórico PERM</small></header>
-<main class="wrap"><h1>Empregadores e oportunidades com evidência migratória</h1><p class="muted">Identifique anúncios que mencionam patrocínio e empresas com histórico de PERM ou H-1B. Não é um buscador genérico de empregos.</p>
-<div class="notice"><strong>Classificação das evidências:</strong> (A) anúncio atual com menção afirmativa de patrocínio, ainda sujeito a confirmação; (B) histórico de PERM/LCA informado, a validar nos dados oficiais; (C) anúncio sem evidência suficiente — não é apresentado como vaga patrocinada. Registros PERM não identificam automaticamente EB-2 versus EB-3. Nenhum visto ou aprovação é garantido.</div>
+<small>Oportunidades de trabalho legal e planejamento de imigração para os Estados Unidos</small></header>
+<main class="wrap"><h1>Seu caminho para trabalhar legalmente nos EUA</h1><p class="muted">Encontre empregadores com evidências de contratação internacional, descubra oportunidades atuais ou recentes e organize uma estratégia de imigração para agora ou para o futuro.</p>
+<div class="pathways" aria-label="Caminhos de imigração e trabalho">
+<div class="pathway"><strong>Quero trabalhar nos EUA</strong><p>Investigue empregadores, vagas com indicação de patrocínio e opções de contratação internacional, inclusive H-1B, H-2A, H-2B e EB-3 quando houver evidências.</p></div>
+<div class="pathway"><strong>Quero migrar no futuro</strong><p>Construa uma lista de empresas com histórico migratório, acompanhe oportunidades e organize contatos e candidaturas com antecedência. EB-2 NIW pode seguir uma via sem empregador patrocinador.</p></div>
+</div>
+<div class="notice"><strong>Como ler os resultados:</strong> anúncios atuais com menção afirmativa de patrocínio são diferentes de registros históricos PERM/LCA. Os históricos ainda precisam de conferência nas fontes oficiais; nenhuma categoria implica vaga disponível, patrocínio confirmado para você ou visto aprovado. Oportunidades H-2A/H-2B e cruzamento automático com DOL ainda não estão integrados.</div>
 <div class="connectbar" id="gmailConnectBar"><div><strong>Gmail — aguardando verificação da conexão</strong><span class="sub" id="gmailInfo">Para enviar com PDF em um clique, conecte seu Gmail ao Horizon.</span></div><div class="actions"><button id="connectBtn" type="button" onclick="connectGmail()" disabled>Conectar Gmail</button><button id="disconnectBtn" class="secondary" type="button" onclick="disconnectGmail()" hidden>Desconectar</button></div></div>
 <div class="stats" id="stats"></div>
-<section class="searchpanel"><h2>Pesquisar patrocínio e histórico migratório</h2><p class="sub">A busca prioriza anúncios com menção positiva a patrocínio e permite consultar empregadores com registros históricos informados.</p>
+<section class="searchpanel"><h2>Investigar oportunidades e empregadores</h2><p class="sub">Pesquise empresas que mencionam patrocínio nos anúncios consultados e explore registros históricos informados para sua prospecção. Não se limita a vagas abertas hoje.</p>
 <div class="filters"><div><label for="search">Cargo ou empresa</label><input id="search" placeholder="Ex.: Product Owner, Scrum Master, Project Manager..."></div>
 <div><label>Estado</label><select id="state"><option value="">Todos</option></select></div>
 <div><label>Tipo de evidência / visto</label><select id="sponsor"><option value="">Todos</option><option value="PERM">PERM (histórico)</option><option value="H-1B">H-1B</option><option value="EB-2">EB-2 (menção no anúncio)</option><option value="EB-3">EB-3 (menção no anúncio)</option></select></div>
@@ -71,12 +80,12 @@ dialog::backdrop{background:#10243a99}dialog input{margin:4px 0 10px}
 <div class="actions search-actions"><button id="searchBtn" type="button" onclick="searchLocal()">Pesquisar</button><button type="button" class="secondary" onclick="clearSearch()">Limpar filtros</button></div>
 <div class="sub">Anúncios atuais: Greenhouse, Lever e Remotive com menção afirmativa de patrocínio. Histórico: registros informados, ainda sem auditoria DOL. A cobertura é parcial e não substitui a checagem com o empregador.</div></section>
 <section id="liveArea" aria-live="polite">
-  <h2>Anúncios com indicação de patrocínio</h2>
+  <h2>Oportunidades atuais com menção de patrocínio</h2>
   <p id="liveNote" class="sub">Clique em Pesquisar para procurar anúncios que mencionam patrocínio migratório. A ausência de resultado não prova que não há vagas.</p>
   <div class="cards" id="liveJobs"></div>
 </section>
 <section id="historyArea" style="margin-top:26px">
-  <h2>Empresas com histórico informado e candidaturas</h2>
+  <h2>Empregadores para prospecção e acompanhamento</h2>
   <p class="sub">Registros informados anteriormente na pesquisa Immigrow/Horizon (ainda não auditados contra o DOL). Não confundir com vaga aberta ou compromisso de patrocínio. Acompanhe aqui os e-mails enviados.</p>
   <p id="resultnote" class="resultnote" role="status"></p>
   <div class="cards" id="jobs"></div>
