@@ -44,13 +44,13 @@ dialog::backdrop{background:#10243a99}dialog input{margin:4px 0 10px}
 <main class="wrap"><h1>Explorar oportunidades</h1><p class="muted">Filtre empresas, visualize estados e organize sua prospecção.</p>
 <div class="notice"><strong>Ambiente de demonstração.</strong> Os registros iniciais são exemplos baseados em informações históricas ainda não verificadas. Não são ofertas atuais nem comprovação de patrocínio EB-3. A aplicação não envia e-mails automaticamente. Os dados ficam neste navegador.</div>
 <div class="stats" id="stats"></div>
-<section class="searchpanel"><h2>Pesquisar oportunidades</h2><p class="sub">Consulte as oportunidades registradas ou procure novas vagas em sites externos.</p>
+<section class="searchpanel"><h2>Pesquisar oportunidades</h2><p class="sub">Consulte as oportunidades cadastradas no Horizon USA AI.</p>
 <div class="filters"><div><label for="search">Cargo ou empresa</label><input id="search" placeholder="Ex.: Product Owner, Scrum Master, Project Manager..."></div>
 <div><label>Estado</label><select id="state"><option value="">Todos</option></select></div>
 <div><label>Histórico</label><select id="sponsor"><option value="">Todos</option><option value="PERM">PERM</option><option value="H-1B">H-1B</option></select></div>
 <div><label>Status</label><select id="status"><option value="">Todos</option><option>Pendente</option><option>Contato enviado</option><option>Candidatura enviada</option><option>Resposta recebida</option><option>Falha de entrega</option></select></div></div>
-<div class="actions search-actions"><button type="button" onclick="searchLocal()">🔎 Pesquisar na base</button><button type="button" class="secondary" onclick="searchOnline()">Pesquisar novas vagas online ↗</button><button type="button" class="secondary" onclick="clearSearch()">Limpar filtros</button></div>
-<div class="sub">A busca online abre resultados públicos em outra aba. A importação automática de vagas ainda está em desenvolvimento.</div></section>
+<div class="actions search-actions"><button type="button" onclick="searchLocal()">Pesquisar</button><button type="button" class="secondary" onclick="clearSearch()">Limpar filtros</button></div>
+<div class="sub">A pesquisa consulta as oportunidades cadastradas no Horizon USA AI.</div></section>
 <div class="actions"><button onclick="document.getElementById('csv').click()">Importar CSV</button><input id="csv" type="file" accept=".csv" hidden>
 <button class="secondary" onclick="exportJSON()">Exportar controle</button>
 <a href="https://www.dol.gov/agencies/eta/foreign-labor/performance" target="_blank" rel="noopener">Fonte oficial DOL</a></div>
