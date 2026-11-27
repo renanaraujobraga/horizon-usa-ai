@@ -36,6 +36,11 @@ dialog::backdrop{background:#10243a99}dialog input{margin:4px 0 10px}
 .cvbox .checkrow input{width:17px;height:17px;flex:none;margin:0}
 .cvbox .sub{margin:5px 0}
 .cvbox button{margin-top:5px}
+.connectbar{margin:15px 0 0;background:#fff;border:1px solid #bdd5cd;border-radius:12px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.connectbar strong{display:block}.connectbar .sub{display:block}
+#sendBtn:disabled{opacity:.55;cursor:not-allowed}
+#sendresult{margin-top:11px;font-weight:650}
+
 
 @media(max-width:750px){.filters,.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.wrap{padding:18px 12px}}
 </style></head><body>
@@ -43,6 +48,7 @@ dialog::backdrop{background:#10243a99}dialog input{margin:4px 0 10px}
 <small>Inteligência de oportunidades e candidaturas nos Estados Unidos · MVP 0.1</small></header>
 <main class="wrap"><h1>Explorar oportunidades</h1><p class="muted">Filtre empresas, visualize estados e organize sua prospecção.</p>
 <div class="notice"><strong>Ambiente de demonstração.</strong> Os registros iniciais são exemplos baseados em informações históricas ainda não verificadas. Não são ofertas atuais nem comprovação de patrocínio EB-3. A aplicação não envia e-mails automaticamente. Os dados ficam neste navegador.</div>
+<div class="connectbar" id="gmailConnectBar"><div><strong>Gmail — aguardando verificação da conexão</strong><span class="sub" id="gmailInfo">Para enviar com PDF em um clique, conecte seu Gmail ao Horizon.</span></div><div class="actions"><button id="connectBtn" type="button" onclick="connectGmail()" disabled>Conectar Gmail</button><button id="disconnectBtn" class="secondary" type="button" onclick="disconnectGmail()" hidden>Desconectar</button></div></div>
 <div class="stats" id="stats"></div>
 <section class="searchpanel"><h2>Pesquisar oportunidades</h2><p class="sub">Consulte as oportunidades cadastradas no Horizon USA AI.</p>
 <div class="filters"><div><label for="search">Cargo ou empresa</label><input id="search" placeholder="Ex.: Product Owner, Scrum Master, Project Manager..."></div>
@@ -62,10 +68,11 @@ dialog::backdrop{background:#10243a99}dialog input{margin:4px 0 10px}
 <div class="cvname" id="draftcvname">Nenhum currículo selecionado</div>
 <label class="checkrow"><input id="defaultcv" type="checkbox"> Usar este currículo como padrão nas próximas oportunidades</label>
 <p class="sub" id="cvhelp">O currículo padrão fica salvo apenas neste navegador/dispositivo.</p>
-<div class="actions"><button class="secondary" type="button" id="downloadcv" onclick="downloadCV()" disabled>Baixar PDF para anexar ao Gmail</button><button class="secondary" type="button" onclick="clearDefaultCV()">Remover padrão salvo</button></div>
+<div class="actions"><button class="secondary" type="button" id="downloadcv" onclick="downloadCV()" disabled>Baixar cópia do PDF</button><button class="secondary" type="button" onclick="clearDefaultCV()">Remover padrão salvo</button></div>
 </section>
-<p class="sub"><strong>Atenção:</strong> Abrir o Gmail pelo link não adiciona anexos automaticamente. O CV salvo será selecionado aqui, mas você ainda precisará anexá-lo manualmente no Gmail. O botão de download facilita essa etapa.</p>
-<div class="actions"><button onclick="gmail()">Abrir no Gmail</button><button class="secondary" onclick="copy()">Copiar mensagem</button><button class="secondary" onclick="document.getElementById('dlg').close()">Fechar</button></div></dialog>
+<p class="sub" id="sendHelp">O botão Enviar enviará esta mensagem e o PDF usando a conta Gmail conectada ao Horizon. O status será atualizado somente após confirmação do Gmail.</p>
+<p class="sub" id="sendresult" role="status" aria-live="polite"></p>
+<div class="actions"><button id="sendBtn" type="button" onclick="sendGmail()" disabled>Enviar e-mail com CV</button><button class="secondary" type="button" onclick="copy()">Copiar mensagem</button><button class="secondary" type="button" onclick="document.getElementById('dlg').close()">Fechar</button></div></dialog>
 <script>
 "use strict";
 const initial=[
@@ -134,7 +141,7 @@ tx.objectStore("documents").delete("default");tx.oncomplete=resolve;tx.onerror=(
 });
 }
 function validCV(file){return file&&file.name.toLowerCase().endsWith(".pdf")&&file.size<=10*1024*1024&&file.size>0}
-function showCV(){el("draftcvname").textContent=currentCV?currentCV.name+" · "+(currentCV.size/1024).toFixed(0)+" KB":"Nenhum currículo selecionado";el("downloadcv").disabled=!currentCV}
+function showCV(){el("draftcvname").textContent=currentCV?currentCV.name+" · "+(currentCV.size/1024).toFixed(0)+" KB":"Nenhum currículo selecionado";el("downloadcv").disabled=!currentCV;if(typeof updateSendButton==="function")updateSendButton()}
 async function updateCV(file,checkbox){
 if(!validCV(file)){alert("Selecione um PDF de até 10 MB.");return}
 currentCV=file;showCV();
@@ -161,13 +168,90 @@ function setStatus(id,s){const x=items.find(x=>x.id===id);if(x){x.status=s;save(
 function draft(id){const x=items.find(x=>x.id===id);if(!x)return;if((x.emailSentAt||["Contato enviado","Enviado","Candidatura enviada","Resposta recebida"].includes(x.status))&&!confirm("Já existe contato registrado. Preparar outro e-mail mesmo assim?"))return;
 el("dcompany").textContent=x.company+" — "+x.role;el("to").value=x.email||"";el("sub").value=x.role+" | Product Leadership and EB-3 Inquiry";
 el("body").value="Dear "+(x.contact?x.contact.split(" ")[0]:"Hiring Team")+",\n\nI am a senior technology and product leader with over 20 years of experience, including more than a decade leading product and project delivery. I am interested in learning more about "+x.role+" opportunities at "+x.company+".\n\nMy background includes enterprise SaaS, CRM, AI-enabled products, product roadmaps and cross-functional delivery. I would also appreciate knowing whether your company considers EB-3 permanent residence sponsorship for qualified international candidates.\n\nI would welcome the opportunity to discuss my experience and share my resume.\n\nBest regards,\nRenan Braga\nlinkedin.com/in/renanb";
-el("draftcv").value="";showCV();el("dlg").showModal()}
-function gmail(){if(currentCV&&!confirm("Seu currículo está salvo no Horizon, mas NÃO será anexado automaticamente ao Gmail. Você precisará anexar o PDF manualmente. Continuar?"))return;window.open("https://mail.google.com/mail/?view=cm&fs=1&to="+encodeURIComponent(el("to").value)+"&su="+encodeURIComponent(el("sub").value)+"&body="+encodeURIComponent(el("body").value),"_blank","noopener")}
+currentOpportunity=x.id;el("sendresult").textContent="";el("draftcv").value="";showCV();el("dlg").showModal();updateSendButton()}
+let gmailConnected=false,gmailConfigured=false,gmailEmail="",sending=false,currentOpportunity=null;
+async function checkGmailStatus(){
+ try{
+  const response=await fetch("/api/gmail-status",{credentials:"same-origin",cache:"no-store"});
+  if(!response.ok)throw Error("Servidor indisponível");
+  const info=await response.json();
+  gmailConnected=!!info.connected;gmailConfigured=!!info.configured;gmailEmail=info.email||"";
+  const heading=el("gmailConnectBar").querySelector("strong");
+  const infoLabel=el("gmailInfo");
+  heading.textContent=gmailConnected?"Gmail conectado: "+gmailEmail:gmailConfigured?"Gmail não conectado":"Gmail API ainda não configurada";
+  infoLabel.textContent=gmailConnected?"Envie mensagens com PDF diretamente pelo Horizon.":"Conecte sua conta uma vez para enviar e-mails com anexos.";
+  el("connectBtn").hidden=gmailConnected;el("connectBtn").disabled=!gmailConfigured;
+  el("disconnectBtn").hidden=!gmailConnected;
+ }catch(err){
+  gmailConnected=false;el("gmailConnectBar").querySelector("strong").textContent="Conexão Gmail indisponível";
+  el("gmailInfo").textContent="Verifique a configuração do servidor.";
+  el("connectBtn").disabled=true;
+ }
+ updateSendButton();
+}
+function connectGmail(){if(gmailConfigured)location.assign("/api/auth-start")}
+async function disconnectGmail(){
+ if(!confirm("Desconectar o Gmail deste navegador?"))return;
+ const response=await fetch("/api/gmail-disconnect",{method:"POST",credentials:"same-origin"});
+ if(response.ok)await checkGmailStatus();
+}
+function updateSendButton(){
+ const ready=gmailConnected&&!!currentCV&&!sending;
+ el("sendBtn").disabled=!ready;
+ el("sendHelp").textContent=!gmailConnected?"Conecte o Gmail na parte superior da página antes de enviar.":!currentCV?"Selecione um PDF (máximo 2 MB) para liberar o envio.":"Ao confirmar, a mensagem e o PDF serão enviados pela conta "+gmailEmail+".";
+}
+function pdfToBase64(file){
+ return new Promise((resolve,reject)=>{
+  const reader=new FileReader();reader.onload=()=>{
+    const result=String(reader.result||"");
+    resolve(result.split(",")[1]||"");
+  };reader.onerror=()=>reject(Error("Não foi possível ler o arquivo PDF"));
+  reader.readAsDataURL(file);
+ });
+}
+async function sendGmail(){
+ if(sending||!gmailConnected)return;
+ const to=el("to").value.trim(),subject=el("sub").value.trim(),body=el("body").value;
+ if(!to||!subject||!body.trim())return alert("Informe o destinatário, o assunto e a mensagem.");
+ if(!currentCV||!validCV(currentCV))return alert("Selecione um currículo PDF válido.");
+ if(currentCV.size>2*1024*1024)return alert("Para envio direto, use um PDF de até 2 MB.");
+ if(!currentOpportunity)return alert("Oportunidade não identificada.");
+ if(!confirm("Enviar agora para "+to+" com o currículo "+currentCV.name+" usando "+gmailEmail+"?"))return;
+ sending=true;updateSendButton();el("sendresult").textContent="Enviando e-mail e PDF...";
+ try{
+  const pdfBase64=await pdfToBase64(currentCV);
+  const response=await fetch("/api/gmail-send",{
+   method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({to,subject,body,filename:currentCV.name,pdfBase64})
+  });
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok||!result.sent||!result.id)throw Error(result.error||"Gmail não confirmou o envio.");
+  const job=items.find(x=>x.id===currentOpportunity);
+  if(job){
+   job.status="Contato enviado";job.emailSentAt=new Date().toISOString().slice(0,10);
+   job.gmailUrl="https://mail.google.com/mail/u/0/#all/"+encodeURIComponent(result.id);
+   job.lastGmailId=result.id;job.lastSentTo=to;
+   save();
+  }
+  el("sendresult").textContent="Enviado com PDF! O Gmail confirmou o envio (ID "+result.id+").";
+  alert("Gmail confirmou o envio do e-mail com o PDF anexado.");
+  el("dlg").close();
+ }catch(err){
+  el("sendresult").textContent="Não foi possível enviar: "+err.message;
+  alert("Envio não confirmado: "+err.message);
+ }finally{sending=false;updateSendButton()}
+}
 async function copy(){try{await navigator.clipboard.writeText(el("body").value);alert("Mensagem copiada")}catch{alert("Selecione e copie a mensagem")}}
 function exportJSON(){const blob=new Blob([JSON.stringify(items,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="horizon-controle.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
 function csvRows(t){let out=[],row=[],cell="",quoted=false;for(let i=0;i<t.length;i++){const c=t[i];if(c==='"'){if(quoted&&t[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(c===","&&!quoted){row.push(cell);cell=""}else if(c==="\n"&&!quoted){row.push(cell.replace(/\r$/,""));out.push(row);row=[];cell=""}else cell+=c}if(cell||row.length){row.push(cell);out.push(row)}return out}
 el("csv").onchange=async e=>{const f=e.target.files[0];if(!f)return;const [head,...rows]=csvRows(await f.text());const keys=head.map(h=>h.trim().toLowerCase());if(!["company","role","state"].every(k=>keys.includes(k))){alert("O CSV precisa das colunas company, role e state.");return}let added=0;for(const row of rows){const obj=Object.fromEntries(keys.map((k,i)=>[k,row[i]?.trim()||""]));if(!obj.company||!obj.role||items.some(x=>x.company===obj.company&&x.role===obj.role&&x.state===obj.state))continue;items.push({...obj,id:Math.max(-1,...items.map(x=>x.id))+1,annual:Number(obj.annual)||0,perm:Number(obj.perm)||0,h1b:Number(obj.h1b)||0,status:"Pendente",verified:false});added++}save();alert(added+" registros importados");e.target.value=""}
-loadCV();
+loadCV();checkGmailStatus();
+const gmailCallback=new URLSearchParams(location.search).get("gmail");
+if(gmailCallback){
+ history.replaceState(null,"",location.pathname+location.hash);
+ if(gmailCallback==="connected")setTimeout(()=>alert("Gmail conectado com sucesso!"),100);
+ else setTimeout(()=>alert("Não foi possível conectar o Gmail ("+gmailCallback+"). Verifique a configuração ou tente novamente."),100);
+}
 ["search","state","sponsor","status"].forEach(id=>el(id).addEventListener("input",render));
 el("search").addEventListener("keydown",e=>{if(e.key==="Enter")searchLocal()});
 render();
