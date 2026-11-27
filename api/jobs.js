@@ -49,7 +49,7 @@ function extractState(location){
 }
 function isUS(location){
  const t=String(location||"");
- return !!extractState(t)||/\b(United States|U\\.?S\\.?A\\.?|U\\.?S\\.?|US[- /]Remote|Remote[- /]US|America\/United States)\b/i.test(t);
+ return !!extractState(t)||/\b(United States|USA|US|U\.S\.A\.|U\.S\.|US[- /]Remote|Remote[- /]US)\b/i.test(t);
 }
 function acceptableUrl(uri){
  try{const u=new URL(uri);return u.protocol==="https:"?u.toString():""}catch{return ""}
