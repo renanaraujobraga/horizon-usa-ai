@@ -242,9 +242,6 @@ async function sendGmail(){
  }finally{sending=false;updateSendButton()}
 }
 async function copy(){try{await navigator.clipboard.writeText(el("body").value);alert("Mensagem copiada")}catch{alert("Selecione e copie a mensagem")}}
-function exportJSON(){const blob=new Blob([JSON.stringify(items,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="horizon-controle.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
-function csvRows(t){let out=[],row=[],cell="",quoted=false;for(let i=0;i<t.length;i++){const c=t[i];if(c==='"'){if(quoted&&t[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(c===","&&!quoted){row.push(cell);cell=""}else if(c==="\n"&&!quoted){row.push(cell.replace(/\r$/,""));out.push(row);row=[];cell=""}else cell+=c}if(cell||row.length){row.push(cell);out.push(row)}return out}
-el("csv").onchange=async e=>{const f=e.target.files[0];if(!f)return;const [head,...rows]=csvRows(await f.text());const keys=head.map(h=>h.trim().toLowerCase());if(!["company","role","state"].every(k=>keys.includes(k))){alert("O CSV precisa das colunas company, role e state.");return}let added=0;for(const row of rows){const obj=Object.fromEntries(keys.map((k,i)=>[k,row[i]?.trim()||""]));if(!obj.company||!obj.role||items.some(x=>x.company===obj.company&&x.role===obj.role&&x.state===obj.state))continue;items.push({...obj,id:Math.max(-1,...items.map(x=>x.id))+1,annual:Number(obj.annual)||0,perm:Number(obj.perm)||0,h1b:Number(obj.h1b)||0,status:"Pendente",verified:false});added++}save();alert(added+" registros importados");e.target.value=""}
 loadCV();checkGmailStatus();
 const gmailCallback=new URLSearchParams(location.search).get("gmail");
 if(gmailCallback){
