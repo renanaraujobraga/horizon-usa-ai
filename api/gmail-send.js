@@ -44,12 +44,19 @@ export default async function handler(req,res){
   const buffer=Buffer.from(pdfBase64,"base64");
   if(!buffer.length||buffer.length>MAX||buffer.subarray(0,5).toString()!=="%PDF-")return json(res,400,{error:"Arquivo PDF inválido ou acima de 2 MB"});
   const session=await ensureAccess(req,res);
+  if(!session.scopes?.split(" ").includes("https://www.googleapis.com/auth/gmail.send"))
+    return json(res,403,{error:"A conta conectada não concedeu permissão para enviar mensagens. Clique em Reconectar Gmail e autorize o acesso ao envio."});
   const raw=mime({from:session.email,to,subject,body,filename,buffer});
   const response=await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send",{
    method:"POST",headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},body:JSON.stringify({raw})
   });
   const data=await response.json().catch(()=>({}));
-  if(!response.ok)return json(res,response.status===401?401:502,{error:"Gmail recusou o envio. "+(data.error?.message||response.status)});
+  if(!response.ok){
+    const insufficientScope=response.status===403&&(data.error?.message||"").toLowerCase().includes("insufficient authentication scopes");
+    return json(res,insufficientScope?403:response.status===401?401:502,{
+      error:insufficientScope?"A autorização do Gmail não permite enviar mensagens. Reconecte a conta e conceda a permissão de envio.":"Gmail recusou o envio. "+(data.error?.message||response.status)
+    });
+  }
   if(!data.id)return json(res,502,{error:"Resposta do Gmail sem confirmação do envio"});
   return json(res,200,{sent:true,id:data.id,threadId:data.threadId,email:session.email});
  }catch(e){error(res,e)}
