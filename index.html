@@ -215,7 +215,7 @@ async function sendGmail(){
  if(!to||!subject||!body.trim())return alert("Informe o destinatário, o assunto e a mensagem.");
  if(!currentCV||!validCV(currentCV))return alert("Selecione um currículo PDF válido.");
  if(currentCV.size>2*1024*1024)return alert("Para envio direto, use um PDF de até 2 MB.");
- if(!currentOpportunity)return alert("Oportunidade não identificada.");
+ if(currentOpportunity===null)return alert("Oportunidade não identificada.");
  if(!confirm("Enviar agora para "+to+" com o currículo "+currentCV.name+" usando "+gmailEmail+"?"))return;
  sending=true;updateSendButton();el("sendresult").textContent="Enviando e-mail e PDF...";
  try{
