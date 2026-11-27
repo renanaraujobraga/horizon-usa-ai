@@ -58,3 +58,9 @@ O Gmail só aceita o envio se o token OAuth tiver o escopo `gmail.send`. Se o Ho
 A busca não usa anúncios fictícios: cada resultado exibido vem de uma resposta recebida de uma API pública durante a consulta (sujeita a cache). Os registros iniciais do controle continuam históricos e não devem ser tratados como anúncios abertos. Não é possível afirmar disponibilidade de EB-3, PERM, H-1B ou elegibilidade de candidatos internacionais a partir de uma descrição de emprego que não declare isso expressamente. A aplicação não faz candidatura automática no site da empresa: ao clicar no link você segue para o anúncio original. As vagas retornadas podem ser de qualquer empresa presente nas fontes cobertas; nenhuma promessa de abrangência de todo o mercado dos EUA.
 
 Exemplo de consulta: `/api/jobs?q=scrum%20master&state=TX`. A aplicação não requer nova API key para essa pesquisa. O uso de feeds de terceiros está sujeito aos termos, limites e disponibilidade de cada fornecedor.
+
+## Mapa geográfico dos EUA
+
+Os cards do histórico e dos anúncios consultados usam um mapa SVG responsivo com contornos reais dos 50 estados americanos e do Distrito de Columbia, destacando em verde o estado da vaga. Alaska e Havaí aparecem em posições inseridas da projeção Albers. Quando o estado não é identificado, o mapa permanece neutro. `us-map-data.js` guarda apenas os caminhos vetoriais e não depende de uma API externa.
+
+**Crédito e licença dos contornos:** [gabidavila/react-usa-map](https://github.com/gabidavila/react-usa-map), MIT License, com adaptações de visualização e destaque no Horizon USA AI. Os mapas indicam o estado, não a localização exata da cidade.
