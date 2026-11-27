@@ -51,10 +51,6 @@ dialog::backdrop{background:#10243a99}dialog input{margin:4px 0 10px}
 <div><label>Status</label><select id="status"><option value="">Todos</option><option>Pendente</option><option>Contato enviado</option><option>Candidatura enviada</option><option>Resposta recebida</option><option>Falha de entrega</option></select></div></div>
 <div class="actions search-actions"><button type="button" onclick="searchLocal()">Pesquisar</button><button type="button" class="secondary" onclick="clearSearch()">Limpar filtros</button></div>
 <div class="sub">A pesquisa consulta as oportunidades cadastradas no Horizon USA AI.</div></section>
-<div class="actions"><button onclick="document.getElementById('csv').click()">Importar CSV</button><input id="csv" type="file" accept=".csv" hidden>
-<button class="secondary" onclick="exportJSON()">Exportar controle</button>
-<a href="https://www.dol.gov/agencies/eta/foreign-labor/performance" target="_blank" rel="noopener">Fonte oficial DOL</a></div>
-<p class="sub">CSV aceito: company,role,city,state,annual,perm,h1b,email,contact,url. Pesquisa automática de vagas, Gmail OAuth e banco compartilhado ainda não estão conectados.</p>
 <p id="resultnote" class="resultnote" role="status"></p><div class="cards" id="jobs"></div></main>
 <dialog id="dlg"><h2>Preparar apresentação</h2><p class="sub" id="dcompany"></p>
 <label>Para</label><input id="to" placeholder="contato@empresa.com">
