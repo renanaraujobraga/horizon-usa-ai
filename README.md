@@ -77,3 +77,11 @@ A plataforma mantém dois conceitos separados:
 - **Andamento da candidatura**: Pendente, Contato enviado, Candidatura enviada, Resposta recebida ou Falha de entrega. Não muda automaticamente só porque o anúncio está publicado ou expirou.
 
 O filtro `Situação da vaga` permite separar as categorias. Uma nova busca só atualiza a data de um anúncio salvo quando a mesma URL reaparece na resposta consultada. Histórico sem URL não é convertido artificialmente em vaga aberta.
+
+## Pesquisa de todas as vagas anunciadas (modo amplo)
+
+A tela **Investigar oportunidades e empregadores** oferece duas opções:
+- **Com indicação de patrocínio**: resultados das fontes ATS/Remotive com menção afirmativa de sponsorship na descrição, mantendo filtros por visto EB-2, EB-3 e H-1B quando explicitamente identificado.
+- **Todas as vagas anunciadas nas fontes**: consulta anúncios públicos independentemente de patrocínio. Um anúncio pode ser classificado como menção positiva de patrocínio, indicação de restrição ou ausência de informação identificada. O usuário pode filtrar por cargo e estado, abrir o anúncio original e salvá-lo no controle. O filtro de visto fica desabilitado nessa busca ampla.
+
+Endpoint: `GET /api/jobs?mode=all&q=product%20manager&state=TX`. O modo padrão permanece `sponsored`. A consulta se limita aos quadros públicos atualmente integrados (Greenhouse, Lever e Remotive), com limite de **100 anúncios exibidos** por resposta, e mostra o número total de resultados encontrados nesses feeds. Não é uma busca exaustiva de todos os empregos nos EUA. **Publicação na fonte não significa necessariamente que a vaga esteja recebendo candidaturas neste instante**; confirme no anúncio oficial. O status “Anúncio publicado na última consulta” descreve a última observação, não uma garantia de disponibilidade.
