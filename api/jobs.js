@@ -70,7 +70,7 @@ function cleanText(text){
 function immigrationEvidence(description){
  const text=cleanText(description);
  const negatives=[
-  /(?:do(?:es)?\s+not|don['’]?t|won['’]?t|cannot|can['’]?t|unable\s+to|not\s+able\s+to)\s+(?:provide|offer|support|consider|sponsor)[^.!?]{0,75}(?:sponsor|visa|immigration|work\s+authorization)/i,
+  /(?:do(?:es)?\s+not|will\s+not|don['’]?t|won['’]?t|cannot|can['’]?t|unable\s+to|not\s+able\s+to)\s+(?:provide|offer|support|consider|sponsor)[^.!?]{0,75}(?:sponsor|visa|immigration|work\s+authorization)/i,
   /(?:no|without|not\s+(?:available|provided|offered|eligible))\s+(?:visa\s+|immigration\s+)?sponsorship/i,
   /(?:must|need)\s+(?:already\s+)?(?:be\s+)?(?:authorized|eligible)\s+to\s+work[^.!?]{0,110}without\s+(?:the\s+need\s+for\s+)?(?:visa\s+)?sponsorship/i,
   /sponsorship\s+(?:is\s+)?(?:not|unavailable|cannot|won['’]?t)/i
@@ -80,7 +80,7 @@ function immigrationEvidence(description){
   /\b(?:we|company|employer)\s+(?:will|can|may|do)\s+(?:provide|offer|support|consider)\s+(?:visa\s+|immigration\s+|work\s+)?sponsorship\b/i,
   /\b(?:visa|immigration|h[- ]?1b|eb[- ]?[23])\s+sponsorship\s+(?:is\s+)?(?:available|offered|provided|supported|considered)\b/i,
   /\bsponsorship\s+(?:for\s+)?(?:h[- ]?1b|eb[- ]?[23]|work\s+visa|employment\s+visa)[^.!?]{0,35}(?:available|provided|offered|supported|considered)\b/i,
-  /\b(?:offers?|provides?|supports?)\s+(?:employment[- ]based\s+)?(?:visa\s+)?sponsorship\b/i
+  /\b(?:offers?|provides?|supports?|offer|provide|support)\s+(?:employment[- ]based\s+)?(?:(?:visa|immigration|work\s+permit)\s+)?sponsorship\b/i
  ];
  const hit=affirmed.map(rx=>rx.exec(text)).find(Boolean);
  if(!hit)return {kind:"none"};
