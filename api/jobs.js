@@ -17,7 +17,12 @@ const BOARDS=[
  ["lever","spotify","Spotify"],
  ["lever","palantir","Palantir"],
  ["lever","coursera","Coursera"],
- ["lever","atlassian","Atlassian"]
+ ["lever","atlassian","Atlassian"],
+ ["lever","foth","Foth"],
+ ["lever","spawglass","SpawGlass"],
+ ["lever","intersect","Intersect"],
+ ["lever","AccentureConstruct","Accenture Construct"],
+ ["lever","dnllc","DN LLC"]
 ];
 const US_STATES={
  AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",
@@ -153,7 +158,8 @@ export default async function handler(req,res){
    if(mode==="sponsored"&&job.evidence?.kind!=="explicit-claim")return false;
    if(state&&job.state!==state)return false;
    if(visa&&!job.evidence?.visaTypes?.includes(visa))return false;
-   if(q?!matchesQuery(job,q):mode==="sponsored"&&!matchesQuery(job,q))return false;
+   // Without an occupation term, search every profession; never default to technology roles.
+   if(q&&!matchesQuery(job,q))return false;
    const dedupe=job.source+":"+job.id;
    if(seen.has(dedupe))return false;
    seen.add(dedupe);return true;
