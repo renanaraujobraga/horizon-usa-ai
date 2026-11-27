@@ -8,7 +8,10 @@ header{background:linear-gradient(110deg,#0c223c,#183d59);color:#fff;padding:22p
 h1{font-size:28px;margin:0 0 5px}h2{font-size:21px}h3{font-size:19px;margin:11px 0 6px}
 p{margin:7px 0 13px}.muted,small{color:var(--muted)}header small{color:#c3d1dd}
 .cards,.stats,.filters{display:grid;gap:14px}.stats{grid-template-columns:repeat(3,minmax(0,1fr));margin:21px 0}
-.filters{grid-template-columns:2fr repeat(3,1fr);margin:20px 0}
+.filters{grid-template-columns:2fr repeat(3,1fr);margin:14px 0}
+.searchpanel{margin:20px 0;background:white;border:1px solid var(--line);border-radius:14px;padding:19px}
+.searchpanel h2{margin:0 0 6px}.search-actions{margin:15px 0 4px}
+.search-actions button{min-height:42px}.resultnote{font-size:13px;font-weight:650;color:var(--muted);margin:10px 0 18px}
 .cards{grid-template-columns:repeat(auto-fit,minmax(312px,1fr))}
 .panel,.job{background:white;border:1px solid var(--line);border-radius:15px;padding:20px;box-shadow:0 6px 24px #102b4710}
 .stat{font-weight:750;font-size:30px;display:block}
@@ -41,16 +44,18 @@ dialog::backdrop{background:#10243a99}dialog input{margin:4px 0 10px}
 <main class="wrap"><h1>Explorar oportunidades</h1><p class="muted">Filtre empresas, visualize estados e organize sua prospecção.</p>
 <div class="notice"><strong>Ambiente de demonstração.</strong> Os registros iniciais são exemplos baseados em informações históricas ainda não verificadas. Não são ofertas atuais nem comprovação de patrocínio EB-3. A aplicação não envia e-mails automaticamente. Os dados ficam neste navegador.</div>
 <div class="stats" id="stats"></div>
-<div class="filters"><div><label>Buscar cargo ou empresa</label><input id="search" placeholder="Product Owner, Scrum Master..."></div>
+<section class="searchpanel"><h2>Pesquisar oportunidades</h2><p class="sub">Consulte as oportunidades registradas ou procure novas vagas em sites externos.</p>
+<div class="filters"><div><label for="search">Cargo ou empresa</label><input id="search" placeholder="Ex.: Product Owner, Scrum Master, Project Manager..."></div>
 <div><label>Estado</label><select id="state"><option value="">Todos</option></select></div>
 <div><label>Histórico</label><select id="sponsor"><option value="">Todos</option><option value="PERM">PERM</option><option value="H-1B">H-1B</option></select></div>
 <div><label>Status</label><select id="status"><option value="">Todos</option><option>Pendente</option><option>Contato enviado</option><option>Candidatura enviada</option><option>Resposta recebida</option><option>Falha de entrega</option></select></div></div>
+<div class="actions search-actions"><button type="button" onclick="searchLocal()">🔎 Pesquisar na base</button><button type="button" class="secondary" onclick="searchOnline()">Pesquisar novas vagas online ↗</button><button type="button" class="secondary" onclick="clearSearch()">Limpar filtros</button></div>
+<div class="sub">A busca online abre resultados públicos em outra aba. A importação automática de vagas ainda está em desenvolvimento.</div></section>
 <div class="actions"><button onclick="document.getElementById('csv').click()">Importar CSV</button><input id="csv" type="file" accept=".csv" hidden>
 <button class="secondary" onclick="exportJSON()">Exportar controle</button>
-<button class="secondary" onclick="document.getElementById('cv').click()">Definir CV padrão</button><input id="cv" type="file" accept=".pdf,application/pdf" hidden><span id="cvname" class="sub"></span>
 <a href="https://www.dol.gov/agencies/eta/foreign-labor/performance" target="_blank" rel="noopener">Fonte oficial DOL</a></div>
 <p class="sub">CSV aceito: company,role,city,state,annual,perm,h1b,email,contact,url. Pesquisa automática de vagas, Gmail OAuth e banco compartilhado ainda não estão conectados.</p>
-<div class="cards" id="jobs"></div></main>
+<p id="resultnote" class="resultnote" role="status"></p><div class="cards" id="jobs"></div></main>
 <dialog id="dlg"><h2>Preparar apresentação</h2><p class="sub" id="dcompany"></p>
 <label>Para</label><input id="to" placeholder="contato@empresa.com">
 <label>Assunto</label><input id="sub">
@@ -92,6 +97,15 @@ localStorage.setItem("horizon-ai-v1",JSON.stringify(items));
 localStorage.setItem(migrationKey,"done");
 }
 const statusOptions=["Pendente","Contato enviado","Candidatura enviada","Resposta recebida","Falha de entrega"];
+function searchLocal(){render();el("resultnote").scrollIntoView({behavior:"smooth",block:"start"})}
+function searchOnline(){
+const role=el("search").value.trim()||"Product Owner OR Product Manager OR Scrum Master OR Project Manager";
+const state=el("state").value;
+const query=[role,"jobs",state?state+" United States":"United States","2026", "-internship"].join(" ");
+window.open("https://www.google.com/search?q="+encodeURIComponent(query)+"&ibp=htl;jobs","_blank","noopener,noreferrer")
+}
+function clearSearch(){el("search").value="";el("state").value="";el("sponsor").value="";el("status").value="";render()}
+
 // Store the actual PDF Blob in IndexedDB (not localStorage); never upload it to a server.
 let currentCV=null,cvDBPromise=null;
 function cvDB(){
@@ -127,13 +141,13 @@ function showCV(){el("draftcvname").textContent=currentCV?currentCV.name+" · "+
 async function updateCV(file,checkbox){
 if(!validCV(file)){alert("Selecione um PDF de até 10 MB.");return}
 currentCV=file;showCV();
-if(checkbox){el("defaultcv").checked=true;try{await persistCV(file);el("cvname").textContent=file.name+" · padrão salvo"}catch(err){alert("Não foi possível salvar o PDF neste navegador: "+err.message)}}
+if(checkbox){el("defaultcv").checked=true;try{await persistCV(file);el("draftcvname").textContent=file.name+" · currículo padrão salvo"}catch(err){alert("Não foi possível salvar o PDF neste navegador: "+err.message)}}
 }
-async function loadCV(){try{const doc=await savedCV();if(doc&&doc.file){currentCV=new File([doc.file],doc.name,{type:"application/pdf"});el("defaultcv").checked=true;el("cvname").textContent=doc.name+" · padrão salvo"}}catch(err){el("cvname").textContent="Armazenamento de PDF indisponível"}showCV()}
+async function loadCV(){try{const doc=await savedCV();if(doc&&doc.file){currentCV=new File([doc.file],doc.name,{type:"application/pdf"});el("defaultcv").checked=true}}catch(err){el("draftcvname").textContent="Armazenamento de PDF indisponível"}showCV()}
 function downloadCV(){if(!currentCV)return;const url=URL.createObjectURL(currentCV),a=document.createElement("a");a.href=url;a.download=currentCV.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)}
-async function clearDefaultCV(){try{await deleteCV();el("defaultcv").checked=false;el("cvname").textContent="";currentCV=null;el("cv").value="";el("draftcv").value="";showCV()}catch(err){alert("Erro ao remover currículo: "+err.message)}}
+async function clearDefaultCV(){try{await deleteCV();el("defaultcv").checked=false;currentCV=null;el("draftcv").value="";showCV()}catch(err){alert("Erro ao remover currículo: "+err.message)}}
 el("draftcv").addEventListener("change",e=>{const file=e.target.files[0];if(file)updateCV(file,el("defaultcv").checked)});
-el("defaultcv").addEventListener("change",async e=>{if(e.target.checked){if(currentCV){try{await persistCV(currentCV);el("cvname").textContent=currentCV.name+" · padrão salvo"}catch(err){e.target.checked=false;alert(err.message)}}else {e.target.checked=false;alert("Selecione primeiro um PDF.")}}else{try{await deleteCV();el("cvname").textContent=""}catch(err){alert(err.message)}}});
+el("defaultcv").addEventListener("change",async e=>{if(e.target.checked){if(currentCV){try{await persistCV(currentCV);el("cvname").textContent=currentCV.name+" · padrão salvo"}catch(err){e.target.checked=false;alert(err.message)}}else {e.target.checked=false;alert("Selecione primeiro um PDF.")}}else{try{await deleteCV();el("draftcvname").textContent="Nenhum currículo selecionado"}catch(err){alert(err.message)}}});
 
 const el=id=>document.getElementById(id),escapeHTML=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])),money=n=>Number(n).toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
 const positions={WA:3,MT:6,ND:7,MN:8,ME:12,OR:15,ID:16,SD:19,WI:20,MI:22,VT:23,NH:24,CA:27,NV:28,WY:29,NE:31,IA:32,IL:33,IN:34,OH:35,PA:36,NY:37,MA:38,RI:39,UT:40,CO:41,KS:43,MO:44,KY:46,WV:47,VA:48,MD:49,NJ:50,CT:51,AZ:52,NM:53,OK:55,AR:56,TN:57,NC:58,SC:59,DE:60,TX:65,LA:67,MS:68,AL:69,GA:70,FL:83,AK:74,HI:76};
@@ -142,6 +156,7 @@ function save(){localStorage.setItem("horizon-ai-v1",JSON.stringify(items));rend
 function render(){
 const prev=el("state").value;el("state").innerHTML='<option value="">Todos</option>'+[...new Set(items.map(x=>x.state))].filter(Boolean).sort().map(x=>'<option>'+escapeHTML(x)+'</option>').join("");el("state").value=prev;
 let rows=items.filter(x=>(x.company+" "+x.role).toLowerCase().includes(el("search").value.toLowerCase())&&(!el("state").value||x.state===el("state").value)&&(!el("status").value||x.status===el("status").value)&&(!el("sponsor").value||(el("sponsor").value==="PERM"?x.perm>0:x.h1b>0)));
+el("resultnote").textContent=rows.length+" oportunidade(s) encontrada(s) na base cadastrada — "+items.length+" registro(s) no total.";
 el("stats").innerHTML=[["Empresas",new Set(items.map(x=>x.company)).size],["Oportunidades",items.length],["E-mails enviados",items.filter(x=>x.emailSentAt||["Contato enviado","Enviado"].includes(x.status)).length]].map(([n,v])=>'<div class=panel><div class=muted>'+n+'</div><span class=stat>'+v+'</span></div>').join("");
 el("jobs").innerHTML=rows.map(x=>'<article class=job><span class="tag warn">Patrocínio não confirmado</span><h3>'+escapeHTML(x.role)+'</h3><strong>'+escapeHTML(x.company)+'</strong><p class=sub>'+escapeHTML(x.city||"Local não informado")+', '+escapeHTML(x.state||"")+'</p>'+map(x.state)+'<hr><div class=sub>Remuneração histórica informada</div><div class=salary>'+(x.annual?money(x.annual)+"/ano":"Não informada")+'</div><div class=sub>'+(x.annual?money(x.annual/12)+"/mês bruto":"")+'</div><p>Histórico PERM: '+Number(x.perm||0)+' · H-1B: '+Number(x.h1b||0)+'</p><p><b>Contato:</b> '+escapeHTML(x.contact||"Não informado")+'<br><span class=sub>'+escapeHTML(x.email||"Não informado")+'</span></p><label>Andamento da oportunidade</label><select onchange="setStatus('+x.id+',this.value)">'+statusOptions.map(s=>'<option '+(x.status===s?"selected":"")+'>'+s+'</option>').join("")+'</select><p class=sub>'+(x.emailSentAt?'E-mail enviado em '+escapeHTML(x.emailSentAt)+' · CV anexado':'Sem contato enviado registrado')+'</p><div class=actions><button onclick="draft('+x.id+')">Preparar e-mail</button>'+(x.gmailUrl?'<a target="_blank" rel="noopener noreferrer" href="'+escapeHTML(x.gmailUrl)+'">Ver e-mail enviado</a>':'')+'<a target="_blank" rel="noopener" href="https://www.google.com/search?q='+encodeURIComponent(x.company+" careers "+x.role)+'">Buscar anúncio</a></div></article>').join("")||"<p>Nenhum resultado.</p>";
 }
@@ -155,6 +170,8 @@ async function copy(){try{await navigator.clipboard.writeText(el("body").value);
 function exportJSON(){const blob=new Blob([JSON.stringify(items,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="horizon-controle.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
 function csvRows(t){let out=[],row=[],cell="",quoted=false;for(let i=0;i<t.length;i++){const c=t[i];if(c==='"'){if(quoted&&t[i+1]==='"'){cell+='"';i++}else quoted=!quoted}else if(c===","&&!quoted){row.push(cell);cell=""}else if(c==="\n"&&!quoted){row.push(cell.replace(/\r$/,""));out.push(row);row=[];cell=""}else cell+=c}if(cell||row.length){row.push(cell);out.push(row)}return out}
 el("csv").onchange=async e=>{const f=e.target.files[0];if(!f)return;const [head,...rows]=csvRows(await f.text());const keys=head.map(h=>h.trim().toLowerCase());if(!["company","role","state"].every(k=>keys.includes(k))){alert("O CSV precisa das colunas company, role e state.");return}let added=0;for(const row of rows){const obj=Object.fromEntries(keys.map((k,i)=>[k,row[i]?.trim()||""]));if(!obj.company||!obj.role||items.some(x=>x.company===obj.company&&x.role===obj.role&&x.state===obj.state))continue;items.push({...obj,id:Math.max(-1,...items.map(x=>x.id))+1,annual:Number(obj.annual)||0,perm:Number(obj.perm)||0,h1b:Number(obj.h1b)||0,status:"Pendente",verified:false});added++}save();alert(added+" registros importados");e.target.value=""}
-el("cv").onchange=async e=>{const file=e.target.files[0];if(file)await updateCV(file,true);e.target.value=""};loadCV();
-["search","state","sponsor","status"].forEach(id=>el(id).addEventListener("input",render));render();
+loadCV();
+["search","state","sponsor","status"].forEach(id=>el(id).addEventListener("input",render));
+el("search").addEventListener("keydown",e=>{if(e.key==="Enter")searchLocal()});
+render();
 </script></body></html>
