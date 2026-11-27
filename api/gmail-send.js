@@ -3,12 +3,14 @@ import {configured,ensureAccess,securePost,json,error} from "./_gmail.js";
 const MAX=2*1024*1024;
 const b64=s=>Buffer.from(s,"utf8").toString("base64");
 const fold=s=>s.match(/.{1,76}/g)?.join("\r\n")||"";
-function mime({to,subject,body,filename,buffer}){
+function mime({from,to,subject,body,filename,buffer}){
  const boundary="horizon_"+crypto.randomBytes(12).toString("hex");
  const cleanFilename=filename.replace(/[^a-zA-Z0-9_.-]/g,"_").slice(0,110);
  const subjectHeader="=?UTF-8?B?"+b64(subject)+"?=";
  const parts=[
+ "From: "+from,
  "To: "+to,
+ "Date: "+new Date().toUTCString(),
  "Subject: "+subjectHeader,
  "MIME-Version: 1.0",
  'Content-Type: multipart/mixed; boundary="'+boundary+'"',
@@ -42,7 +44,7 @@ export default async function handler(req,res){
   const buffer=Buffer.from(pdfBase64,"base64");
   if(!buffer.length||buffer.length>MAX||buffer.subarray(0,5).toString()!=="%PDF-")return json(res,400,{error:"Arquivo PDF inválido ou acima de 2 MB"});
   const session=await ensureAccess(req,res);
-  const raw=mime({to,subject,body,filename,buffer});
+  const raw=mime({from:session.email,to,subject,body,filename,buffer});
   const response=await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send",{
    method:"POST",headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},body:JSON.stringify({raw})
   });
