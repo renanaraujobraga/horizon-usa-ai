@@ -132,6 +132,8 @@ export default async function handler(req,res){
  const q=String(req.query?.q||"").slice(0,100).trim();
  const state=String(req.query?.state||"").toUpperCase().slice(0,2);
  const visa=String(req.query?.visa||"").toUpperCase().slice(0,5);
+ const mode=String(req.query?.mode||"sponsored").slice(0,12);
+ if(!["sponsored","all"].includes(mode))return res.status(400).json({error:"Modo de busca inválido"});
  if(state&&!US_STATES[state])return res.status(400).json({error:"Estado inválido"});
  if(visa&&!["EB-2","EB-3","H-1B"].includes(visa))return res.status(400).json({error:"Categoria de visto inválida"});
  const checkedAt=new Date().toISOString();
@@ -148,21 +150,23 @@ export default async function handler(req,res){
   const seen=new Set();
   const matches=jobs.filter(job=>{
    if(!job.url||!job.role||!job.company||!isUS(job.location))return false;
-   if(job.evidence?.kind!=="explicit-claim")return false;
+   if(mode==="sponsored"&&job.evidence?.kind!=="explicit-claim")return false;
    if(state&&job.state!==state)return false;
-   if(visa&&!job.evidence.visaTypes.includes(visa))return false;
-   if(!matchesQuery(job,q))return false;
+   if(visa&&!job.evidence?.visaTypes?.includes(visa))return false;
+   if(q?!matchesQuery(job,q):mode==="sponsored"&&!matchesQuery(job,q))return false;
    const dedupe=job.source+":"+job.id;
    if(seen.has(dedupe))return false;
    seen.add(dedupe);return true;
   });
   // Prioritize titles and locations that match user's professional focus.
-  matches.sort((a,b)=>Number(ROLE_RE.test(b.role))-Number(ROLE_RE.test(a.role))||
-   String(b.publishedAt||"").localeCompare(String(a.publishedAt||"")));
+  matches.sort((a,b)=>
+    (b.evidence?.kind==="explicit-claim"?1:0)-(a.evidence?.kind==="explicit-claim"?1:0)||
+    Number(ROLE_RE.test(b.role))-Number(ROLE_RE.test(a.role))||
+    String(b.publishedAt||"").localeCompare(String(a.publishedAt||"")));
   return res.status(200).json({
-   jobs:matches.slice(0,100),totalMatches:matches.length,checkedAt,
+   jobs:matches.slice(0,100),totalMatches:matches.length,checkedAt,mode,limit:100,
    sourcesOk:found,sourcesChecked:results.length,unavailable,
-   note:"Somente anúncios com indicação afirmativa de patrocínio na descrição. Mesmo assim, tipo de visto e elegibilidade precisam de confirmação. Não são provas de EB-2, EB-3 ou H-1B aprovados."
+   note:mode==="all"?"Anúncios retornados pelas fontes consultadas. A busca não cobre todas as vagas dos EUA nem comprova que estejam aceitando candidaturas agora. Menções de patrocínio estão classificadas separadamente.":"Somente anúncios com indicação afirmativa de patrocínio na descrição. Mesmo assim, tipo de visto e elegibilidade precisam de confirmação."
   });
  }catch(e){
   console.error("Public job search failure",e?.name||"Error");
