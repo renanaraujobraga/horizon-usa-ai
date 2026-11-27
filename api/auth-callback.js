@@ -28,7 +28,7 @@ export default async function handler(req,res){
       return go(tokenCode==="invalid_client"?"token_client":tokenCode==="invalid_grant"?"token_grant":"token_other");
     }
     if(!tokens.access_token)return go("token_missing");
-    const grantedScopes=(typeof tokens.scope==="string"?tokens.scope:"").split(/\\s+/).filter(Boolean);
+    const grantedScopes=(typeof tokens.scope==="string"?tokens.scope:"").split(" ").filter(Boolean);
     if(!grantedScopes.includes("https://www.googleapis.com/auth/gmail.send")){
       console.error("Google OAuth authorization missing gmail.send scope");
       return go("gmail_scope_missing");
