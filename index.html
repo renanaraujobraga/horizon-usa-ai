@@ -231,8 +231,20 @@ el("defaultcv").addEventListener("change",async e=>{if(e.target.checked){if(curr
 const positions={WA:3,MT:6,ND:7,MN:8,ME:12,OR:15,ID:16,SD:19,WI:20,MI:22,VT:23,NH:24,CA:27,NV:28,WY:29,NE:31,IA:32,IL:33,IN:34,OH:35,PA:36,NY:37,MA:38,RI:39,UT:40,CO:41,KS:43,MO:44,KY:46,WV:47,VA:48,MD:49,NJ:50,CT:51,AZ:52,NM:53,OK:55,AR:56,TN:57,NC:58,SC:59,DE:60,TX:65,LA:67,MS:68,AL:69,GA:70,FL:83,AK:74,HI:76};
 function map(state){const grid=Array.from({length:84},()=>"<i></i>");for(const [k,pos] of Object.entries(positions))grid[pos-1]='<span class="'+(k===state?"hi":"")+'">'+k+"</span>";return '<div class="map" aria-label="Esquema dos estados dos EUA, destaque em '+escapeHTML(state)+'">'+grid.join("")+"</div><div class=sub>Mapa esquemático (posição aproximada), não geográfico</div>"}
 function save(){localStorage.setItem("horizon-ai-v1",JSON.stringify(items));render()}
+const allStates={
+AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",
+FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",
+KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",
+MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",
+NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",
+PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",
+UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming",
+DC:"District of Columbia"
+};
 function render(){
-const prev=el("state").value;el("state").innerHTML='<option value="">Todos</option>'+[...new Set(items.map(x=>x.state))].filter(Boolean).sort().map(x=>'<option>'+escapeHTML(x)+'</option>').join("");el("state").value=prev;
+const prev=el("state").value;
+el("state").innerHTML='<option value="">Todos os estados</option>'+Object.entries(allStates).sort((a,b)=>a[1].localeCompare(b[1],"en")).map(([code,name])=>'<option value="'+code+'">'+escapeHTML(name)+' ('+code+')</option>').join("");
+el("state").value=prev;
 let rows=items.filter(x=>(x.company+" "+x.role).toLowerCase().includes(el("search").value.toLowerCase())&&(!el("state").value||x.state===el("state").value)&&(!el("status").value||x.status===el("status").value)&&(!el("sponsor").value||(el("sponsor").value==="PERM"?x.perm>0:x.h1b>0)));
 el("resultnote").textContent=rows.length+" oportunidade(s) encontrada(s) na base cadastrada — "+items.length+" registro(s) no total.";
 el("stats").innerHTML=[["Empresas",new Set(items.map(x=>x.company)).size],["Oportunidades",items.length],["E-mails enviados",items.filter(x=>x.emailSentAt||["Contato enviado","Enviado"].includes(x.status)).length]].map(([n,v])=>'<div class=panel><div class=muted>'+n+'</div><span class=stat>'+v+'</span></div>').join("");
@@ -343,6 +355,9 @@ if(gmailCallback){
 }
 }
 ["search","state","sponsor","status"].forEach(id=>el(id).addEventListener("input",render));
+["search","state"].forEach(id=>el(id).addEventListener("input",()=>{
+ if(lastSearchAt){lastSearchAt="";liveJobs=[];el("liveJobs").innerHTML="";el("liveNote").textContent="Filtros alterados. Clique em Pesquisar para atualizar as vagas reais.";}
+}));
 el("search").addEventListener("keydown",e=>{if(e.key==="Enter")searchLocal()});
 render();
 </script></body></html>
