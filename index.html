@@ -40,24 +40,43 @@ dialog::backdrop{background:#10243a99}dialog input{margin:4px 0 10px}
 .connectbar strong{display:block}.connectbar .sub{display:block}
 #sendBtn:disabled{opacity:.55;cursor:not-allowed}
 #sendresult{margin-top:11px;font-weight:650}
+#liveArea{padding-top:10px}
+#liveArea h2,#historyArea h2{margin:16px 0 4px}
+.liveJob{border-left:4px solid #087e68}
+.liveJob .tag{background:#eaf5ed;color:#0b664e}
+.liveMeta{font-size:12px;color:#4c6982;line-height:1.6}
+.liveJob a{display:inline-flex;align-items:center;border:1px solid #087e68;border-radius:9px;padding:10px 13px;color:#087e68;font-weight:650;text-decoration:none}
+.liveJob .actions button{margin:0}
+#liveNote{margin:6px 0 17px}
+
 
 
 @media(max-width:750px){.filters,.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.wrap{padding:18px 12px}}
 </style></head><body>
 <header><div style="font-size:21px;font-weight:800;letter-spacing:.5px">HORIZON <span style="color:#5cdbb4">USA AI</span></div>
-<small>Inteligência de oportunidades e candidaturas nos Estados Unidos · MVP 0.1</small></header>
+<small>Pesquisa de vagas publicadas e gestão de candidaturas · MVP 0.3</small></header>
 <main class="wrap"><h1>Explorar oportunidades</h1><p class="muted">Filtre empresas, visualize estados e organize sua prospecção.</p>
-<div class="notice"><strong>Ambiente de demonstração.</strong> Os registros iniciais são exemplos baseados em informações históricas ainda não verificadas. Não são ofertas atuais nem comprovação de patrocínio EB-3. A aplicação não envia e-mails automaticamente. Os dados ficam neste navegador.</div>
+<div class="notice"><strong>Fontes diferentes:</strong> a pesquisa consulta anúncios públicos atualizados das empresas; os registros de histórico migratório exibidos abaixo são exemplos ainda não verificados. Anúncio publicado não significa patrocínio EB-3. E-mails são enviados somente quando você clicar em Enviar e-mail com CV.</div>
 <div class="connectbar" id="gmailConnectBar"><div><strong>Gmail — aguardando verificação da conexão</strong><span class="sub" id="gmailInfo">Para enviar com PDF em um clique, conecte seu Gmail ao Horizon.</span></div><div class="actions"><button id="connectBtn" type="button" onclick="connectGmail()" disabled>Conectar Gmail</button><button id="disconnectBtn" class="secondary" type="button" onclick="disconnectGmail()" hidden>Desconectar</button></div></div>
 <div class="stats" id="stats"></div>
-<section class="searchpanel"><h2>Pesquisar oportunidades</h2><p class="sub">Consulte as oportunidades cadastradas no Horizon USA AI.</p>
+<section class="searchpanel"><h2>Pesquisar vagas abertas nos EUA</h2><p class="sub">Consulte vagas publicadas nos sistemas de recrutamento das empresas, sem sair do Horizon.</p>
 <div class="filters"><div><label for="search">Cargo ou empresa</label><input id="search" placeholder="Ex.: Product Owner, Scrum Master, Project Manager..."></div>
 <div><label>Estado</label><select id="state"><option value="">Todos</option></select></div>
 <div><label>Histórico</label><select id="sponsor"><option value="">Todos</option><option value="PERM">PERM</option><option value="H-1B">H-1B</option></select></div>
 <div><label>Status</label><select id="status"><option value="">Todos</option><option>Pendente</option><option>Contato enviado</option><option>Candidatura enviada</option><option>Resposta recebida</option><option>Falha de entrega</option></select></div></div>
-<div class="actions search-actions"><button type="button" onclick="searchLocal()">Pesquisar</button><button type="button" class="secondary" onclick="clearSearch()">Limpar filtros</button></div>
-<div class="sub">A pesquisa consulta as oportunidades cadastradas no Horizon USA AI.</div></section>
-<p id="resultnote" class="resultnote" role="status"></p><div class="cards" id="jobs"></div></main>
+<div class="actions search-actions"><button id="searchBtn" type="button" onclick="searchLocal()">Pesquisar</button><button type="button" class="secondary" onclick="clearSearch()">Limpar filtros</button></div>
+<div class="sub">Fontes: Greenhouse, Lever e Remotive. A cobertura não inclui todo o mercado americano. A pesquisa mostra apenas os anúncios recebidos no momento da consulta.</div></section>
+<section id="liveArea" aria-live="polite">
+  <h2>Vagas encontradas nas fontes públicas</h2>
+  <p id="liveNote" class="sub">Digite um cargo e clique em Pesquisar para consultar anúncios públicos.</p>
+  <div class="cards" id="liveJobs"></div>
+</section>
+<section id="historyArea" style="margin-top:26px">
+  <h2>Meu controle e histórico de prospecção</h2>
+  <p class="sub">Inclui os contatos já realizados e registros históricos informados. Eles não representam, necessariamente, vagas abertas.</p>
+  <p id="resultnote" class="resultnote" role="status"></p>
+  <div class="cards" id="jobs"></div>
+</section></main>
 <dialog id="dlg"><h2>Preparar apresentação</h2><p class="sub" id="dcompany"></p>
 <label>Para</label><input id="to" placeholder="contato@empresa.com">
 <label>Assunto</label><input id="sub">
@@ -101,14 +120,69 @@ localStorage.setItem(migrationKey,"done");
 }
 const el=id=>document.getElementById(id),escapeHTML=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])),money=n=>Number(n).toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
 const statusOptions=["Pendente","Contato enviado","Candidatura enviada","Resposta recebida","Falha de entrega"];
-function searchLocal(){render();el("resultnote").scrollIntoView({behavior:"smooth",block:"start"})}
-function searchOnline(){
-const role=el("search").value.trim()||"Product Owner OR Product Manager OR Scrum Master OR Project Manager";
-const state=el("state").value;
-const query=[role,"jobs",state?state+" United States":"United States","2026", "-internship"].join(" ");
-window.open("https://www.google.com/search?q="+encodeURIComponent(query)+"&ibp=htl;jobs","_blank","noopener,noreferrer")
+let liveJobs=[],lastSearchAt="",searchBusy=false,liveSourceNote="";
+async function searchLocal(){
+ if(searchBusy)return;
+ searchBusy=true;
+ el("searchBtn").disabled=true;
+ el("searchBtn").textContent="Pesquisando...";
+ el("liveNote").textContent="Consultando anúncios publicados em fontes públicas dos EUA...";
+ el("liveJobs").innerHTML="";
+ const q=el("search").value.trim(),state=el("state").value;
+ const params=new URLSearchParams();
+ if(q)params.set("q",q);
+ if(state&&state.length===2&&state!=="US")params.set("state",state);
+ try{
+   const res=await fetch("/api/jobs?"+params.toString(),{cache:"no-store"});
+   const data=await res.json().catch(()=>({}));
+   if(!res.ok)throw Error(data.error||"Falha ao consultar vagas");
+   liveJobs=Array.isArray(data.jobs)?data.jobs:[];
+   lastSearchAt=data.checkedAt||"";
+   liveSourceNote=data.sourcesOk+" de "+data.sourcesChecked+" fontes responderam";
+   if(data.unavailable?.length)liveSourceNote+="; indisponíveis: "+data.unavailable.slice(0,6).join(", ")+(data.unavailable.length>6?" e outras":"");
+   renderLive();
+ }catch(e){
+   liveJobs=[];lastSearchAt="";
+   el("liveNote").textContent="Não foi possível completar a busca: "+e.message+". Tente novamente.";
+   el("liveJobs").innerHTML="";
+ }finally{
+   searchBusy=false;el("searchBtn").disabled=false;el("searchBtn").textContent="Pesquisar";
+   el("liveArea").scrollIntoView({behavior:"smooth",block:"start"});
+ }
+ render();
 }
-function clearSearch(){el("search").value="";el("state").value="";el("sponsor").value="";el("status").value="";render()}
+function liveMap(job){
+ if(!job.state)return '<p class="sub">Localização informada pela fonte: '+escapeHTML(job.location||"não especificada")+'</p>';
+ return map(job.state);
+}
+function renderLive(){
+ const count=liveJobs.length;
+ const at=lastSearchAt?new Date(lastSearchAt).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}):"";
+ el("liveNote").textContent=count+" vaga(s) correspondente(s) · Consulta "+at+" · "+liveSourceNote+". Patrocínio EB-3 não verificado; confirme no anúncio.";
+ el("liveJobs").innerHTML=liveJobs.map((x,i)=>{
+  const saved=items.some(y=>y.sourceUrl===x.url);
+  const validUrl=typeof x.url==="string"&&x.url.startsWith("https://")?escapeHTML(x.url):"";
+  return '<article class="job liveJob"><span class="tag">Anúncio público · '+escapeHTML(x.source)+'</span><h3>'+escapeHTML(x.role)+'</h3><strong>'+escapeHTML(x.company)+'</strong><p class="liveMeta">'+escapeHTML(x.location||"Local não informado")+(x.remote?" · Remoto":"")+'</p>'+liveMap(x)+
+   (x.salaryText?'<p><strong>Salário informado: </strong>'+escapeHTML(x.salaryText)+'</p>':'<p class="sub">Salário não informado pela fonte.</p>')+
+   '<p class="sub">Vaga consultada: '+escapeHTML(at)+'. Requisitos de visto/EB-3 não confirmados.</p><div class="actions">'+
+   (validUrl?'<a href="'+validUrl+'" target="_blank" rel="noopener noreferrer">Ver anúncio e candidatar-se</a>':'')+
+   '<button type="button" class="secondary" onclick="saveLiveJob('+i+')" '+(saved?'disabled':'')+'>'+(saved?'Salva no controle':'Salvar no controle')+'</button></div></article>';
+ }).join("")||'<div class="panel"><strong>Nenhum anúncio encontrado nesses feeds para os filtros selecionados.</strong><p class="sub">Tente outro termo ou estado. Isso não significa que não existam vagas nos EUA.</p></div>';
+}
+function saveLiveJob(i){
+ const x=liveJobs[i];if(!x||!x.url||items.some(y=>y.sourceUrl===x.url))return;
+ const nextId=Math.max(-1,...items.map(y=>Number(y.id)||0))+1;
+ items.push({id:nextId,company:x.company,role:x.role,city:x.location,state:x.state||"US",annual:0,perm:0,h1b:0,
+  contact:"",email:"",status:"Pendente",sourceUrl:x.url,source:x.source,verifiedAt:lastSearchAt,remote:x.remote});
+ save();renderLive();
+ el("liveNote").textContent="Vaga salva! Você pode acompanhar o status no quadro Meu controle e histórico de prospecção.";
+}
+function clearSearch(){
+ el("search").value="";el("state").value="";el("sponsor").value="";el("status").value="";
+ liveJobs=[];lastSearchAt="";
+ el("liveNote").textContent="Filtros limpos. Clique em Pesquisar para consultar anúncios públicos.";
+ el("liveJobs").innerHTML="";render();
+}
 
 // Store the actual PDF Blob in IndexedDB (not localStorage); never upload it to a server.
 let currentCV=null,cvDBPromise=null;
