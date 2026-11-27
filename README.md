@@ -68,3 +68,12 @@ Os cards do histórico e dos anúncios consultados usam um mapa SVG responsivo c
 ## Posicionamento de produto (novembro de 2026)
 
 Horizon USA AI atende pessoas que querem trabalhar legalmente nos EUA no curto prazo **ou** construir um plano de imigração para o futuro. Não é um simples agregador genérico de vagas. Busca evidências de contratação internacional, oportunidades com menção a patrocínio e histórico migratório de empregadores, preservando classificação explícita de cada evidência. A jornada contempla vias temporárias H-1B/H-2A/H-2B, possibilidades permanentes EB-3/EB-2 e, quando aplicável, EB-2 NIW sem empregador patrocinador. **O código atual ainda não oferece busca H-2A/H-2B, importação DOL, cobertura completa de EB-2/EB-3 ou aconselhamento imigratório**. A interface identifica essas integrações como futuras.
+
+## Situação da vaga e andamento da candidatura
+
+A plataforma mantém dois conceitos separados:
+
+- **Situação da vaga**: `Anúncio publicado na última consulta` quando o anúncio foi retornado por um feed público há até 24 horas; `Somente histórico — vaga atual não confirmada` quando há apenas registro histórico/prospecção; e `Situação atual não verificada` quando uma vaga salva não reapareceu recentemente na consulta. Anúncio publicado não garante que o recrutamento ainda está ativo no instante do clique.
+- **Andamento da candidatura**: Pendente, Contato enviado, Candidatura enviada, Resposta recebida ou Falha de entrega. Não muda automaticamente só porque o anúncio está publicado ou expirou.
+
+O filtro `Situação da vaga` permite separar as categorias. Uma nova busca só atualiza a data de um anúncio salvo quando a mesma URL reaparece na resposta consultada. Histórico sem URL não é convertido artificialmente em vaga aberta.
